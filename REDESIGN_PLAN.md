@@ -1,0 +1,1641 @@
+# 人生升级 (LifeUp) — 完整重设计实施文档
+
+> **给下一位 AI 开发者：** 这份文档是你实施整个重设计的蓝图。请从头到尾仔细阅读，理解设计哲学后再动手写代码。当前代码全部可以删除重写——这不是增量修改，是从零开始的重新构想。
+
+---
+
+## 目录
+
+1. [设计哲学](#1-设计哲学)
+2. [当前系统的问题诊断](#2-当前系统的问题诊断)
+3. [核心游戏循环](#3-核心游戏循环)
+4. [新数据模型](#4-新数据模型)
+5. [新 UI 架构](#5-新-ui-架构)
+6. [详细屏幕设计](#6-详细屏幕设计)
+7. [游戏机制详解](#7-游戏机制详解)
+8. [技术架构](#8-技术架构)
+9. [实施路线图](#9-实施路线图)
+10. [当前代码参考](#10-当前代码参考)
+11. [附录：种子数据](#11-附录种子数据)
+
+---
+
+## 1. 设计哲学
+
+### 核心愿景
+
+**让玩家用游戏的感觉来掌控人生。**
+
+不是"给待办事项列表套一层 RPG 皮肤"，而是**真实生活本身就是游戏**。玩家投入的每一分钟真实时间都在游戏中有对应的反馈。游戏不是生活的影子——游戏就是生活本身的数据化呈现。
+
+### 四大映射原则
+
+| 现实概念 | 游戏概念 | 设计含义 |
+|---------|---------|---------|
+| **时间** | **货币** | 时间是唯一不可再生的资源。花在哪里，就投资在哪里。浪费时间 = 货币贬值。 |
+| **技能** | **资本** | 技能只能通过时间投入来增长，技能解锁新的可能性（任务、装备、成就前置条件）。 |
+| **成就** | **里程碑** | 成就不是"完成了多少任务"，而是"你的人生到达了什么高度"。不可逆、永久记录。 |
+| **装备** | **能力增幅** | 装备不是装饰品，是被动增益。"早起仪式"装备 = 每日经验+20%。装备有耐久度，需要维护。 |
+
+### 设计红线（绝不可违反）
+
+1. **时间必须链接到技能** — 计时器停止时，时间必须转化为某个技能的经验值。不允许"无意义计时"。
+2. **技能只能通过时间投入增长** — 没有捷径、没有购买升级。1小时 = 对应技能的经验值。
+3. **装备必须有实际效果** — 没有纯装饰性装备。每件装备都有可计算的被动效果。
+4. **消耗性活动必须可见** — 刷手机、无目的浏览等"消耗性时间"必须被记录，与"投资性时间"形成对比。
+5. **UI 必须是游戏界面** — 不是"带像素风的待办事项 App"。是"RPG 游戏界面，数据来自真实生活"。
+
+---
+
+## 2. 当前系统的问题诊断
+
+### 2.1 根本问题：RPG 是"皮"不是"骨"
+
+当前系统的本质是一个**传统待办事项应用**，上面贴了 RPG 贴纸：
+
+- **任务系统** (`TaskEntity`) 本质是 todo list：title、status、deadline、priority。和任何 todo app 一样。
+- **完成任务的奖励** 是硬编码的：主线=100exp, 支线=50exp, 日常=20exp。没有和实际投入的时间关联。
+- **计时器** (`TimerViewModel`) 和**技能** (`SkillEntity`) 完全断开 — 计时器有 category（work/study/sport...），技能也有 category（professional/language/sport...），但两者没有映射关系。
+- **商店** (`ShopItemEntity`) 的物品是纯装饰：头像、称号、主题配色。effectType 只有 `avatar_style`、`title_prefix`、`theme_color`，没有实际游戏效果。
+- **成就** (`AchievementEntity`) 基于简单计数（完成任务数、技能数），不是人生里程碑。
+
+### 2.2 具体代码问题
+
+| 文件 | 问题 |
+|------|------|
+| `TaskViewModel.completeTask()` | 硬编码 exp 奖励，不关联时间投入 |
+| `TimerViewModel` | 计时结束只记录 ActivityRecord，不增长任何技能 |
+| `SkillViewModel.addSkillExp()` | 手动调用，没有自动从时间投入触发 |
+| `ShopRepository.seedDefaultItems()` | 全是装饰品（头像/称号/主题），无被动效果 |
+| `AchievementManager` | 只检查简单计数条件，不是里程碑式成就 |
+| `CharacterRepository.addExp()` | 经验来源不透明，不知道为什么获得经验 |
+| `NavGraph` / `Screen.kt` | 10个屏幕但核心循环断裂，用户在"任务"和"计时"之间跳转没有关联 |
+
+### 2.3 UI 问题
+
+- CharacterScreen 是"状态面板"不是"游戏主界面"
+- 任务列表看起来就是 todo app + 像素字体
+- 计时器是独立工具，不和角色/技能/装备产生视觉关联
+- 商店是"皮肤商店"不是"装备商店"
+
+---
+
+## 3. 核心游戏循环
+
+### 循环 1：时间 → 经验 → 成长
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│   玩家选择活动类型 ──→ 启动计时器               │
+│        │                        │               │
+│        ▼                        ▼               │
+│   活动类型映射到技能      计时进行中...          │
+│        │                        │               │
+│        ▼                        ▼               │
+│   计时结束 ──→ 时间转化为技能经验 ──→ 技能升级  │
+│        │                                        │
+│        ▼                                        │
+│   角色获得经验 ──→ 角色升级 ──→ 解锁新内容     │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+**关键规则：**
+- 每分钟真实时间 = 基础 2 exp（受装备加成）
+- 活动类型直接映射到技能：`work` → 职业技能, `study` → 学习技能, `sport` → 运动技能, `art` → 艺术技能
+- "消耗性活动"（`scroll` 刷手机, `idle` 发呆）也记录，但 exp 极低（0.3x），且标记为"时间流失"
+- 每日时间投资 vs 时间流失的对比 = **时间资产负债表**
+
+### 循环 2：技能 → 解锁 → 可能性
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│   技能达到指定等级 ──→ 解锁前置条件            │
+│        │                        │               │
+│        ▼                        ▼               │
+│   解锁新任务类型        解锁新装备              │
+│        │                        │               │
+│        ▼                        ▼               │
+│   更高奖励的任务        被动增益提升            │
+│        │                        │               │
+│        ▼                        ▼               │
+│   更高效的时间投资      更快的成长速度          │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+**关键规则：**
+- 技能有前置条件：`Python Lv3` 解锁 `数据分析` 技能；`英语 Lv5` 解锁 `英文阅读` 任务类型
+- 技能树是可见的、有路径的 — 玩家能看到"如果我继续投入时间，就能解锁 X"
+- 技能等级影响任务效率：同是 1 小时学习，`编程 Lv5` 比 `编程 Lv1` 多获得 50% 经验
+
+### 循环 3：装备 → 增幅 → 更好人生
+
+```
+┌─────────────────────────────────────────────────┐
+│                                                 │
+│   装备获得（技能解锁/成就奖励/商店购买）        │
+│        │                                        │
+│        ▼                                        │
+│   装备提供被动增益                              │
+│   · 早起仪式 → 每日首次计时 exp+20%            │
+│   · 运动习惯 → 运动类活动 exp+15%              │
+│   · 深度专注 → 连续计时>45min 额外+10%         │
+│        │                                        │
+│        ▼                                        │
+│   装备有耐久度 ──→ 耐久归零 = 效果消失         │
+│        │                                        │
+│        ▼                                        │
+│   维护装备 = 保持习惯（连续N天执行对应活动）    │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+**关键规则：**
+- 装备耐久度每日 -1，执行对应活动当日不减（维护）
+- 装备效果是可计算的数值加成，不是装饰
+- 装备来源：技能解锁、成就奖励、商店用金币购买
+- 装备可以叠加（多件装备同时生效）
+
+---
+
+## 4. 新数据模型
+
+> **重要：** 这是全新的数据模型。当前所有 Entity 都要删除重写。数据库版本号递增，使用 destructive migration（当前已是如此）。
+
+### 4.1 CharacterEntity（角色）
+
+```kotlin
+@Entity(tableName = "characters")
+data class CharacterEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val level: Int = 1,
+    val exp: Long = 0,
+    val expToNext: Long = 100,       // 升级所需经验，公式：100 * level * 1.4
+    val hp: Int = 100,               // 生命值 = 活力，影响每日可投入时间上限
+    val maxHp: Int = 100,
+    val sp: Int = 10,                // 精力点 = 当日可用专注时段数
+    val maxSp: Int = 10,
+    // 六维属性 — 由技能自动计算，不再手动设置
+    val strength: Int = 1,           // 体质 — 由运动类技能决定
+    val intelligence: Int = 1,       // 智力 — 由学习类技能决定
+    val charm: Int = 1,              // 魅力 — 由社交/艺术类技能决定
+    val constitution: Int = 1,       // 耐力 — 由连续天数/习惯决定
+    val agility: Int = 1,            // 敏捷 — 由多样化活动决定
+    val luck: Int = 1,               // 运气 — 随机事件/彩蛋
+    val gold: Long = 0,              // 金币 = 累计有效时间投入的等价物
+    val avatarStyle: String = "default",
+    val lastActiveDate: String = "",  // yyyy-MM-dd
+    val streakDays: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+**变更说明：**
+- `luck` 替换 `agility` 的旧含义（敏捷现在指活动多样性）
+- 六维属性改为**自动从技能计算**，不手动设置
+- `expToNext` 公式改为 `100 * level * 1.4`（原为 `50 * level * 1.5`，提高升级门槛）
+
+### 4.2 TimeSessionEntity（时间会话）— 替代 ActivityRecord + TaskEntity
+
+> 这是新系统的核心实体。**不再有独立的 TaskEntity。** "任务"的概念被"时间会话"取代 — 你投入时间做一件事，这件事就是你的"任务"。
+
+```kotlin
+@Entity(tableName = "time_sessions")
+data class TimeSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,                          // 活动名称（如"刷LeetCode"、"读《原则》"、"跑步"）
+    val category: String,                       // 活动类型：见 4.2.1
+    val linkedSkillId: Long?,                   // 关联的技能ID — 核心链接！
+    val startTime: Long,                        // 开始时间戳
+    val endTime: Long? = null,                  // 结束时间戳（null = 进行中）
+    val durationMinutes: Long = 0,              // 持续分钟数
+    val baseExp: Long = 0,                      // 基础经验（duration * 2）
+    val bonusExp: Long = 0,                     // 加成经验（装备+技能等级）
+    val totalExp: Long = 0,                     // baseExp + bonusExp
+    val goldEarned: Long = 0,                   // 获得金币
+    val isInvestment: Boolean = true,           // true=投资性时间, false=消耗性时间
+    val note: String = "",
+    val date: String = ""                       // yyyy-MM-dd，用于日统计
+)
+```
+
+#### 4.2.1 活动类型 (category)
+
+| category | 中文名 | 默认关联技能类别 | isInvestment |
+|----------|--------|-----------------|-------------|
+| `coding` | 编程 | professional | true |
+| `study` | 学习 | professional | true |
+| `reading` | 阅读 | professional | true |
+| `language` | 语言学习 | language | true |
+| `exercise` | 运动 | sport | true |
+| `art` | 艺术 | art | true |
+| `social` | 社交 | social | true |
+| `cooking` | 烹饪 | life | true |
+| `meditation` | 冥想 | life | true |
+| `planning` | 规划 | life | true |
+| `scrolling` | 刷手机 | — | **false** |
+| `gaming` | 玩游戏 | — | **false** |
+| `idle` | 发呆 | — | **false** |
+| `commute` | 通勤 | — | **false** |
+| `other_invest` | 其他(投资) | general | true |
+| `other_consume` | 其他(消耗) | — | false |
+
+**消耗性活动的经验系数：0.3x**（1分钟 = 0.6 exp 而非 2 exp）
+
+### 4.3 SkillEntity（技能）
+
+```kotlin
+@Entity(tableName = "skills")
+data class SkillEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val category: String,                       // professional/language/sport/art/life/social/general
+    val level: Int = 1,
+    val maxLevel: Int = 20,                     // 技能最高20级
+    val exp: Long = 0,
+    val expToNext: Long = 60,                   // 公式：60 * level * 1.3
+    val icon: String = "⭐",
+    val description: String = "",
+    val parentSkillId: Long? = null,            // 前置技能
+    val parentLevelRequired: Int = 3,           // 前置技能所需等级（默认3）
+    val unlocked: Boolean = false,
+    val totalMinutesInvested: Long = 0,         // 累计投入分钟数 — 新增！
+    val attributeContribution: String = "",     // JSON: {"intelligence":2} — 对角色属性的贡献
+    val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+**变更说明：**
+- 新增 `totalMinutesInvested`：记录总投入时间，这是技能的真实"含金量"
+- 新增 `parentLevelRequired`：前置技能需要的等级
+- 新增 `attributeContribution`：技能对角色六维的贡献（JSON），如编程技能贡献 intelligence
+- `maxLevel` 从 10 提升到 20
+- `expToNext` 公式改为 `60 * level * 1.3`
+
+### 4.4 EquipmentEntity（装备）— 替代 ShopItemEntity
+
+```kotlin
+@Entity(tableName = "equipment")
+data class EquipmentEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,                           // 如"早起仪式"、"运动习惯"、"深度专注"
+    val description: String,                    // 如"每日首次计时经验+20%"
+    val icon: String = "🛡️",
+    val slot: String,                           // 装备槽位：见 4.4.1
+    val effectType: String,                     // 效果类型：见 4.4.2
+    val effectValue: Double,                    // 效果数值（如 0.2 = +20%）
+    val effectTarget: String = "",              // 效果目标（如 "first_daily", "sport", "long_session"）
+    val maxDurability: Int = 30,                // 最大耐久度（天）
+    val currentDurability: Int = 30,            // 当前耐久度
+    val maintenanceActivity: String = "",       // 维护所需活动类型（如 "exercise"）
+    val source: String = "shop",                // 来源：shop/skill_unlock/achievement_reward
+    val sourceId: Long? = null,                 // 来源ID（技能ID或成就ID）
+    val price: Long = 0,                        // 商店价格（0=不可购买）
+    val owned: Boolean = false,                 // 是否已拥有
+    val active: Boolean = false,                // 是否已装备
+    val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+#### 4.4.1 装备槽位 (slot)
+
+| slot | 中文名 | 说明 |
+|------|--------|------|
+| `habit` | 习惯 | 生活方式类被动增益 |
+| `tool` | 工具 | 效率工具类增益 |
+| `mindset` | 心态 | 精神/心理类增益 |
+| `environment` | 环境 | 环境优化类增益 |
+
+每槽位可装备 1 件，共 4 个槽位。
+
+#### 4.4.2 效果类型 (effectType)
+
+| effectType | 含义 | effectValue | effectTarget |
+|-----------|------|-------------|-------------|
+| `exp_multiplier` | 经验倍率 | 0.2 = +20% | 活动类型或 "all" |
+| `gold_multiplier` | 金币倍率 | 0.15 = +15% | 活动类型或 "all" |
+| `first_daily_bonus` | 每日首次加成 | 0.2 = 首次+20% | 活动类型 |
+| `long_session_bonus` | 长时间加成 | 0.1 = >45min+10% | 最低分钟数 |
+| `streak_bonus` | 连续天数加成 | 0.05 = 每天+5% | 最大天数 |
+| `sp_recovery` | 精力恢复 | 2 = 每日多恢复2 | — |
+
+### 4.5 AchievementEntity（成就）
+
+```kotlin
+@Entity(tableName = "achievements")
+data class AchievementEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val title: String,
+    val description: String,
+    val icon: String = "🏆",
+    val category: String,                      // 成就类别：见 4.5.1
+    val conditionType: String,                  // 条件类型
+    val conditionValue: Long,                   // 条件值
+    val rewardExp: Long = 0,
+    val rewardGold: Long = 0,
+    val rewardEquipmentId: Long? = null,        // 奖励装备ID — 新增！
+    val unlocked: Boolean = false,
+    val unlockedAt: Long = 0,
+    val isMilestone: Boolean = false,           // 是否为里程碑成就 — 新增！
+    val createdAt: Long = System.currentTimeMillis()
+)
+```
+
+#### 4.5.1 成就类别 (category)
+
+| category | 中文名 | 示例 |
+|----------|--------|------|
+| `time_invested` | 时间投资 | "累计投资100小时" |
+| `skill_mastery` | 技能精通 | "任意技能达到Lv10" |
+| `streak` | 坚持连续 | "连续30天投资时间" |
+| `diversity` | 多样性 | "同时拥有3个Lv5技能" |
+| `equipment` | 装备收集 | "同时装备4件装备" |
+| `life_event` | 人生事件 | "角色达到Lv20" |
+
+### 4.6 TimeAssetEntity（时间资产）— 全新实体
+
+```kotlin
+@Entity(tableName = "time_assets")
+data class TimeAssetEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val date: String,                           // yyyy-MM-dd
+    val totalMinutes: Long = 0,                 // 当日总记录时间
+    val investedMinutes: Long = 0,              // 投资性时间
+    val consumedMinutes: Long = 0,              // 消耗性时间
+    val investmentRatio: Double = 0.0,          // 投资比率 = invested / total
+    val topSkillId: Long? = null,               // 当日投入最多的技能
+    val topSkillMinutes: Long = 0,              // 当日最多技能的分钟数
+    val sessionsCount: Int = 0,                 // 当日会话数
+    val expEarned: Long = 0,                    // 当日获得经验
+    val goldEarned: Long = 0                    // 当日获得金币
+)
+```
+
+**说明：** 这是"时间资产负债表"的每日快照。玩家每天都能看到：我今天的时间花在哪里了？投资了多少？浪费了多少？
+
+### 4.7 数据库定义
+
+```kotlin
+@Database(
+    entities = [
+        CharacterEntity::class,
+        TimeSessionEntity::class,
+        SkillEntity::class,
+        EquipmentEntity::class,
+        AchievementEntity::class,
+        TimeAssetEntity::class
+    ],
+    version = 4,  // 从v3升级
+    exportSchema = false
+)
+abstract class LifeUpDatabase : RoomDatabase() {
+    abstract fun characterDao(): CharacterDao
+    abstract fun timeSessionDao(): TimeSessionDao
+    abstract fun skillDao(): SkillDao
+    abstract fun equipmentDao(): EquipmentDao
+    abstract fun achievementDao(): AchievementDao
+    abstract fun timeAssetDao(): TimeAssetDao
+}
+```
+
+**删除的实体：** `TaskEntity`, `ShopItemEntity`, `PurchaseRecordEntity`, `ActivityRecord`
+**新增的实体：** `TimeSessionEntity`, `EquipmentEntity`, `TimeAssetEntity`
+
+---
+
+## 5. 新 UI 架构
+
+### 5.1 导航结构
+
+**从 5-tab 底部导航改为 4-tab，核心是"游戏主界面"：**
+
+```
+┌──────────────────────────────────────┐
+│                                      │
+│          [游戏主界面内容]             │
+│                                      │
+│                                      │
+├──────────────────────────────────────┤
+│  ⚔️冒险  │  🗺️技能  │  📊账本  │  ⚙️设置  │
+└──────────────────────────────────────┘
+```
+
+| Tab | 名称 | 对应 Screen | 说明 |
+|-----|------|-------------|------|
+| 1 | 冒险 | `AdventureScreen` | 主游戏界面：计时+角色状态+今日进度 |
+| 2 | 技能 | `SkillMapScreen` | 技能树地图，像RPG的天赋树 |
+| 3 | 账本 | `LedgerScreen` | 时间资产负债表，每日/每周/每月 |
+| 4 | 设置 | `SettingsScreen` | 角色创建/编辑、装备管理、成就、备份 |
+
+### 5.2 Screen 列表
+
+```kotlin
+sealed class Screen(val route: String) {
+    // 主导航
+    data object Adventure : Screen("adventure")       // 冒险（主界面）
+    data object SkillMap : Screen("skill_map")         // 技能地图
+    data object Ledger : Screen("ledger")              // 时间账本
+    data object Settings : Screen("settings")          // 设置
+
+    // 详情/子页面（隐藏底部导航）
+    data object SkillDetail : Screen("skill/{id}")     // 技能详情
+    data object SessionDetail : Screen("session/{id}") // 时间会话详情
+    data object Equipment : Screen("equipment")        // 装备管理
+    data object Achievements : Screen("achievements")  // 成就列表
+    data object CharacterCreate : Screen("character_create") // 角色创建
+    data object SessionHistory : Screen("session_history")   // 历史会话
+}
+```
+
+### 5.3 全局 UI 覆盖层
+
+- **AchievementUnlockOverlay** — 成就解锁弹窗（保留，但重新设计动画）
+- **LevelUpOverlay** — 升级弹窗（保留，但加入技能升级+装备解锁提示）
+- **SessionCompleteOverlay** — 新增！计时完成时的结算弹窗，显示获得的经验/金币/技能进度
+
+---
+
+## 6. 详细屏幕设计
+
+### 6.1 AdventureScreen（冒险 — 主界面）
+
+> 这是玩家 90% 时间停留的界面。必须一眼看到：我在做什么、我进展如何、我今天投入了多少时间。
+
+**布局（从上到下）：**
+
+```
+┌──────────────────────────────────────┐
+│  [角色头像] Lv.12 冒险者小明        │
+│  ████████░░░░ EXP 340/1680          │
+│  ❤️ 85/100  ⚡ 7/10  💰 1,240       │
+├──────────────────────────────────────┤
+│                                      │
+│  ╔══════════════════════════════╗    │
+│  ║   ⏱️  00:32:15              ║    │
+│  ║   正在修炼：Python编程       ║    │
+│  ║   ████████░░░░ 65%          ║    │
+│  ║                              ║    │
+│  ║   [⏸暂停]  [⏹结束]         ║    │
+│  ╚══════════════════════════════╝    │
+│                                      │
+├──────────────────────────────────────┤
+│  📅 今日时间投资                     │
+│  ┌──────────┬──────────┐            │
+│  │ 投资 3.2h│ 消耗 0.8h│            │
+│  │ ████████ │ ██░░░░░░ │            │
+│  │ 比率 80% │          │            │
+│  └──────────┴──────────┘            │
+│                                      │
+│  🔥 连续投资 12 天                   │
+│  🛡️ 装备效果: exp+35%               │
+├──────────────────────────────────────┤
+│  今日技能进度                        │
+│  Python  ████████░░ Lv.7 → 8       │
+│  英语    ██████░░░░ Lv.4 → 5       │
+│  跑步    ████░░░░░░ Lv.2 → 3       │
+└──────────────────────────────────────┘
+```
+
+**交互：**
+- 点击计时器区域 → 选择活动类型 → 选择关联技能 → 开始计时
+- 计时中显示实时经验预估（"预计获得 64 exp"）
+- 点击角色头像 → 角色详情弹窗（六维属性+装备）
+- 下拉 → 查看昨日总结
+
+**没有计时时的状态：**
+```
+┌──────────────────────────────────────┐
+│                                      │
+│        ⚔️ 准备开始今日冒险？         │
+│                                      │
+│   [💻 编程]  [📚 学习]  [🏃 运动]   │
+│   [🎨 艺术]  [🗣️ 语言]  [🧘 冥想]   │
+│   [📱 记录消耗]                      │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+### 6.2 SkillMapScreen（技能地图）
+
+> 像RPG的天赋树/技能树。不是列表，是**有路径的图**。
+
+**布局：**
+
+```
+┌──────────────────────────────────────┐
+│  🗺️ 技能地图          [筛选: 全部▼] │
+├──────────────────────────────────────┤
+│                                      │
+│  ┌─── 职业技能 ──────────────────┐  │
+│  │                                │  │
+│  │  Python Lv.7                  │  │
+│  │  ████████░░ 280/546          │  │
+│  │    │                           │  │
+│  │    ├── 数据分析 🔒(需Lv3)     │  │
+│  │    └── Web开发 🔒(需Lv5)     │  │
+│  │                                │  │
+│  │  英语 Lv.4                    │  │
+│  │  ██████░░░░ 120/312          │  │
+│  │    │                           │  │
+│  │    └── 英文阅读 🔒(需Lv5)    │  │
+│  │                                │  │
+│  └────────────────────────────────┘  │
+│                                      │
+│  ┌─── 生活技能 ──────────────────┐  │
+│  │  跑步 Lv.2                    │  │
+│  │  ████░░░░░░ 40/156           │  │
+│  │  烹饪 Lv.1 🔓                 │  │
+│  └────────────────────────────────┘  │
+│                                      │
+│  [+ 添加新技能]                      │
+└──────────────────────────────────────┘
+```
+
+**交互：**
+- 点击技能 → 技能详情页（投入历史、等级进度、解锁路径）
+- 🔒 技能 = 未解锁，显示解锁条件
+- 🔓 技能 = 已解锁但未投入时间
+- 长按 → 删除技能（确认对话框）
+- 筛选：按类别、按等级、按最近投入
+
+**技能详情页 (SkillDetailScreen)：**
+
+```
+┌──────────────────────────────────────┐
+│  ← Python编程                       │
+├──────────────────────────────────────┤
+│  ⭐ Lv.7  职业                      │
+│  ████████░░░░ 280/546 exp           │
+│  累计投入: 42小时30分钟              │
+│                                      │
+│  📊 近7天投入                        │
+│  一 二 三 四 五 六 日               │
+│  ▅  ▅  ▅  ▅  ▅  ▅  ▅              │
+│  60 45 90 30 75 0  0  分钟          │
+│                                      │
+│  🔓 解锁路径                         │
+│  → 数据分析 (还需 Lv.3, 当前 Lv.7 ✅)│
+│  → Web开发 (还需 Lv.5, 当前 Lv.7 ✅) │
+│                                      │
+│  🛡️ 关联装备                         │
+│  深度专注 (编程类exp+10%)            │
+│                                      │
+│  [▶ 开始修炼]                        │
+└──────────────────────────────────────┘
+```
+
+### 6.3 LedgerScreen（时间账本）
+
+> 时间资产负债表。核心问题：**你的时间花在哪里了？**
+
+**布局：**
+
+```
+┌──────────────────────────────────────┐
+│  📊 时间账本     [日▼] [本周▼]      │
+├──────────────────────────────────────┤
+│                                      │
+│  ┌──── 时间资产负债表 ────────────┐ │
+│  │                                │ │
+│  │  💰 总资产（累计投资时间）      │ │
+│  │     186小时42分钟              │ │
+│  │                                │ │
+│  │  📈 今日投资    📉 今日消耗    │ │
+│  │     3h 12m         48m        │ │
+│  │                                │ │
+│  │  投资比率 ████████░░ 80%      │ │
+│  │  (目标: >70% ✅)              │ │
+│  └────────────────────────────────┘ │
+│                                      │
+├──────────────────────────────────────┤
+│  今日时间分布                        │
+│  ┌────────────────────────────┐    │
+│  │ Python  ████████████ 1h30m │    │
+│  │ 英语    ██████       45m   │    │
+│  │ 跑步    ████         30m   │    │
+│  │ 刷手机  ██           15m   │    │
+│  │ 冥想    ██           12m   │    │
+│  └────────────────────────────┘    │
+│                                      │
+├──────────────────────────────────────┤
+│  近7天趋势                          │
+│  80%│    ╱╲                         │
+│  60%│  ╱  ╲╱╲                       │
+│  40%│╱      ╲                       │
+│     └──────────                     │
+│      一 二 三 四 五 六 日           │
+│      (投资比率趋势)                  │
+└──────────────────────────────────────┘
+```
+
+**交互：**
+- 切换日/周/月视图
+- 点击某个技能的时间条 → 该技能的投入历史
+- 点击"今日消耗" → 消耗性时间详情
+
+### 6.4 SettingsScreen（设置）
+
+```
+┌──────────────────────────────────────┐
+│  ⚙️ 设置                            │
+├──────────────────────────────────────┤
+│                                      │
+│  👤 角色                             │
+│  ├ 冒险者小明  Lv.12                │
+│  ├ [编辑角色]                        │
+│  └ [重新开始]                        │
+│                                      │
+│  🛡️ 装备                            │
+│  ├ 习惯槽: 早起仪式 (耐久28/30)     │
+│  ├ 工具槽: 深度专注 (耐久15/30)     │
+│  ├ 心态槽: 成长思维 (耐久30/30)     │
+│  ├ 环境槽: (空)                     │
+│  └ [装备管理]                        │
+│                                      │
+│  🏆 成就                             │
+│  ├ 已解锁 12/45                      │
+│  └ [查看全部]                        │
+│                                      │
+│  💾 数据                             │
+│  ├ [导出备份]                        │
+│  ├ [导入备份]                        │
+│  └ [清除数据]                        │
+│                                      │
+│  🔧 偏好                             │
+│  ├ 计时时长: 25分钟                  │
+│  ├ 休息时长: 5分钟                   │
+│  ├ 音效: 开                         │
+│  ├ 震动: 开                         │
+│  └ 每日提醒: 关                      │
+│                                      │
+│  v2.0.0                              │
+└──────────────────────────────────────┘
+```
+
+### 6.5 SessionCompleteOverlay（计时结算弹窗）
+
+> 计时结束时全屏弹出，像RPG的战斗结算画面。
+
+```
+┌──────────────────────────────────────┐
+│                                      │
+│         ⚔️ 修炼完成！               │
+│                                      │
+│  Python编程  45分钟                   │
+│                                      │
+│  ┌──── 获得奖励 ──────────────────┐ │
+│  │  ⭐ 经验  +90                  │ │
+│  │     (基础 75 + 加成 15)        │ │
+│  │  💰 金币  +45                  │ │
+│  │  🔥 技能  Python +90 exp      │ │
+│  │     ████████░░ Lv.7 → 280/546 │ │
+│  └────────────────────────────────┘ │
+│                                      │
+│  🛡️ 装备生效                        │
+│  · 深度专注: +15 exp (长时段加成)   │
+│  · 早起仪式: +9 exp (每日首次+20%) │
+│                                      │
+│  🛡️ 耐久维护                        │
+│  · 早起仪式: 耐久不减少 ✅          │
+│                                      │
+│          [确认]                       │
+│                                      │
+└──────────────────────────────────────┘
+```
+
+---
+
+## 7. 游戏机制详解
+
+### 7.1 经验计算公式
+
+```
+baseExp = durationMinutes * 2
+
+// 消耗性活动系数
+if (!isInvestment) baseExp = (baseExp * 0.3).toLong()
+
+// 技能等级加成：技能每5级增加10%效率
+skillLevelBonus = 1.0 + (skillLevel / 5) * 0.1
+
+// 装备加成
+equipmentMultiplier = 1.0
+for each active equipment:
+    if effectType == "exp_multiplier" && matchesTarget(category):
+        equipmentMultiplier += effectValue
+    if effectType == "first_daily_bonus" && isFirstSessionToday:
+        equipmentMultiplier += effectValue
+    if effectType == "long_session_bonus" && durationMinutes >= 45:
+        equipmentMultiplier += effectValue
+
+// 最终经验
+totalExp = (baseExp * skillLevelBonus * equipmentMultiplier).toLong()
+bonusExp = totalExp - baseExp
+```
+
+### 7.2 金币计算
+
+```
+// 金币 = 有效时间的等价物
+// 投资性时间每15分钟 = 1金币
+goldEarned = (durationMinutes / 15).toLong()
+
+// 装备金币加成
+for each active equipment:
+    if effectType == "gold_multiplier" && matchesTarget(category):
+        goldEarned = (goldEarned * (1.0 + effectValue)).toLong()
+```
+
+### 7.3 角色升级
+
+```
+expToNext(level) = (100 * level * 1.4).toLong()
+
+// 升级时：
+level += 1
+maxHp += 5
+maxSp += 1
+gold += level * 10  // 升级奖励金币
+// 检查成就条件
+// 检查技能解锁条件
+```
+
+### 7.4 技能升级
+
+```
+expToNext(level) = (60 * level * 1.3).toLong()
+
+// 技能升级时：
+// 1. 重新计算角色六维属性
+// 2. 检查是否解锁子技能
+// 3. 检查是否满足装备前置条件
+// 4. 检查成就条件
+```
+
+### 7.5 角色六维自动计算
+
+```
+// 六维属性从技能自动计算，不再手动设置
+strength = 1 + (sport类技能等级之和 / 3).toInt()
+intelligence = 1 + (professional类技能等级之和 / 3).toInt()
+charm = 1 + (social类技能等级之和 + art类技能等级之和) / 3).toInt()
+constitution = 1 + (streakDays / 7).toInt()  // 每连续7天+1
+agility = 1 + (不同类别技能达到Lv3的数量)  // 多样性
+luck = 1 + (成就解锁数 / 5).toInt()
+```
+
+### 7.6 装备耐久度
+
+```
+// 每日重置时（0:00）：
+for each active equipment:
+    if todayHadMaintenanceActivity(equipment.maintenanceActivity):
+        // 今日执行了维护活动，耐久不减少
+        continue
+    else:
+        equipment.currentDurability -= 1
+        if equipment.currentDurability <= 0:
+            equipment.active = false  // 装备失效
+            // 通知玩家：装备"早起仪式"已损坏！
+```
+
+### 7.7 每日重置
+
+```
+// 每日0:00执行：
+1. SP恢复到maxSp（受装备sp_recovery加成）
+2. 装备耐久度检查（见7.6）
+3. 连续天数更新（如果昨日有投资性时间，streakDays++，否则streakDays=0）
+4. 生成TimeAssetEntity日快照
+5. 检查成就条件
+```
+
+### 7.8 成就检查条件
+
+```kotlin
+// 新的成就条件类型
+enum class ConditionType {
+    // 时间投资
+    TOTAL_INVESTED_HOURS,      // 累计投资小时数
+    DAILY_INVESTED_HOURS,      // 单日投资小时数
+    INVESTMENT_RATIO,          // 投资比率达标天数
+
+    // 技能
+    ANY_SKILL_LEVEL,           // 任意技能达到N级
+    SKILL_COUNT_AT_LEVEL,      // N个技能达到M级
+    TOTAL_SKILL_MINUTES,       // 累计技能投入分钟数
+
+    // 连续
+    STREAK_DAYS,               // 连续投资天数
+
+    // 装备
+    EQUIPMENT_OWNED,           // 拥有N件装备
+    EQUIPMENT_ACTIVE,          // 同时装备N件
+
+    // 角色
+    CHARACTER_LEVEL,           // 角色等级
+    TOTAL_EXP,                 // 累计经验
+    TOTAL_GOLD,                // 累计金币
+}
+```
+
+---
+
+## 8. 技术架构
+
+### 8.1 项目结构
+
+```
+com.lifeup.app/
+├── data/
+│   ├── db/
+│   │   ├── LifeUpDatabase.kt
+│   │   ├── dao/
+│   │   │   ├── CharacterDao.kt
+│   │   │   ├── TimeSessionDao.kt      // 新
+│   │   │   ├── SkillDao.kt
+│   │   │   ├── EquipmentDao.kt        // 新
+│   │   │   ├── AchievementDao.kt
+│   │   │   └── TimeAssetDao.kt        // 新
+│   │   └── entity/
+│   │       ├── CharacterEntity.kt
+│   │       ├── TimeSessionEntity.kt   // 新
+│   │       ├── SkillEntity.kt
+│   │       ├── EquipmentEntity.kt     // 新
+│   │       ├── AchievementEntity.kt
+│   │       └── TimeAssetEntity.kt     // 新
+│   ├── repository/
+│   │   ├── CharacterRepository.kt
+│   │   ├── TimeSessionRepository.kt   // 新
+│   │   ├── SkillRepository.kt
+│   │   ├── EquipmentRepository.kt     // 新
+│   │   ├── AchievementRepository.kt
+│   │   └── TimeAssetRepository.kt     // 新
+│   ├── preferences/
+│   │   └── SettingsPreferences.kt
+│   └── backup/
+│       └── DataBackupManager.kt
+├── domain/                              // 新增领域层！
+│   ├── model/                           // 领域模型（非Entity）
+│   │   ├── Character.kt
+│   │   ├── TimeSession.kt
+│   │   ├── Skill.kt
+│   │   ├── Equipment.kt
+│   │   ├── Achievement.kt
+│   │   └── TimeAsset.kt
+│   ├── calculator/                      // 游戏计算引擎
+│   │   ├── ExpCalculator.kt            // 经验计算
+│   │   ├── GoldCalculator.kt           // 金币计算
+│   │   ├── AttributeCalculator.kt      // 六维属性计算
+│   │   └── EquipmentEffectCalculator.kt // 装备效果计算
+│   └── game/                            // 游戏逻辑
+│       ├── GameEngine.kt               // 核心游戏循环
+│       ├── AchievementChecker.kt       // 成就检查
+│       └── DailyReset.kt               // 每日重置
+├── ui/
+│   ├── navigation/
+│   │   ├── Screen.kt
+│   │   └── NavGraph.kt
+│   ├── theme/
+│   │   ├── Color.kt
+│   │   ├── Theme.kt
+│   │   └── Typography.kt
+│   ├── components/
+│   │   ├── PixelComponents.kt          // 共享像素风组件
+│   │   ├── GameOverlays.kt             // 游戏弹窗组件
+│   │   └── Charts.kt                   // 图表组件
+│   ├── adventure/
+│   │   ├── AdventureScreen.kt          // 主界面
+│   │   └── AdventureViewModel.kt
+│   ├── skill/
+│   │   ├── SkillMapScreen.kt
+│   │   ├── SkillDetailScreen.kt
+│   │   └── SkillViewModel.kt
+│   ├── ledger/
+│   │   ├── LedgerScreen.kt
+│   │   └── LedgerViewModel.kt
+│   ├── settings/
+│   │   ├── SettingsScreen.kt
+│   │   ├── EquipmentScreen.kt
+│   │   ├── AchievementsScreen.kt
+│   │   └── SettingsViewModel.kt
+│   └── timer/                           // 计时器UI组件
+│       ├── TimerDisplay.kt
+│       └── ActivitySelector.kt
+├── service/
+│   └── TimerService.kt                 // 前台服务（计时器）
+├── di/
+│   ├── DatabaseModule.kt
+│   └── RepositoryModule.kt
+├── util/
+│   ├── EventBus.kt
+│   └── Extensions.kt
+└── LifeUpApplication.kt
+```
+
+### 8.2 核心类职责
+
+#### GameEngine（游戏引擎）
+
+```kotlin
+class GameEngine(
+    private val expCalculator: ExpCalculator,
+    private val goldCalculator: GoldCalculator,
+    private val attributeCalculator: AttributeCalculator,
+    private val equipmentEffectCalculator: EquipmentEffectCalculator,
+    private val achievementChecker: AchievementChecker,
+    private val characterRepository: CharacterRepository,
+    private val skillRepository: SkillRepository,
+    private val timeSessionRepository: TimeSessionRepository,
+    private val timeAssetRepository: TimeAssetRepository,
+    private val equipmentRepository: EquipmentRepository,
+) {
+    /**
+     * 时间会话结算 — 核心方法
+     * 当计时器停止时调用，完成所有游戏循环
+     */
+    suspend fun settleSession(session: TimeSessionEntity): SessionResult {
+        // 1. 计算经验（基础+技能等级+装备加成）
+        // 2. 计算金币
+        // 3. 增加技能经验
+        // 4. 增加角色经验（可能升级）
+        // 5. 增加角色金币
+        // 6. 维护装备耐久
+        // 7. 更新时间资产日快照
+        // 8. 检查成就
+        // 9. 返回结算结果
+    }
+}
+
+data class SessionResult(
+    val baseExp: Long,
+    val bonusExp: Long,
+    val totalExp: Long,
+    val goldEarned: Long,
+    val skillExpGained: Long,
+    val skillLevelUp: Boolean,
+    val characterLevelUp: Boolean,
+    val newCharacterLevel: Int,
+    val unlockedSkills: List<SkillEntity>,
+    val unlockedAchievements: List<AchievementEntity>,
+    val activeEquipmentEffects: List<EquipmentEffect>,
+    val durabilityChanges: List<DurabilityChange>,
+)
+```
+
+#### ExpCalculator（经验计算器）
+
+```kotlin
+class ExpCalculator(
+    private val equipmentEffectCalculator: EquipmentEffectCalculator
+) {
+    fun calculate(
+        durationMinutes: Long,
+        isInvestment: Boolean,
+        skillLevel: Int,
+        category: String,
+        isFirstSessionToday: Boolean,
+        activeEquipment: List<EquipmentEntity>
+    ): ExpBreakdown {
+        // 实现 7.1 的公式
+    }
+}
+
+data class ExpBreakdown(
+    val base: Long,
+    val skillBonus: Long,
+    val equipmentBonus: Long,
+    val total: Long,
+    val equipmentDetails: List<String>  // 如"深度专注: +15"
+)
+```
+
+### 8.3 ViewModel 职责
+
+| ViewModel | 职责 |
+|-----------|------|
+| `AdventureViewModel` | 角色状态、计时器控制、今日进度、开始/暂停/停止计时、调用 GameEngine.settleSession() |
+| `SkillViewModel` | 技能树加载、技能详情、添加技能、技能解锁检查 |
+| `LedgerViewModel` | 时间资产查询、日/周/月统计、趋势数据 |
+| `SettingsViewModel` | 角色编辑、装备管理、成就列表、备份/恢复 |
+
+### 8.4 技术栈（保持不变）
+
+- Kotlin + Jetpack Compose (BOM 2024.10.01)
+- Hilt DI
+- Room DB
+- Material 3 (Always Dark Theme)
+- DataStore Preferences
+- Foreground Service (计时器)
+- Min SDK 26, Target/Compile SDK 35, Java 17
+
+### 8.5 新增依赖建议
+
+```kotlin
+// build.gradle.kts (app)
+dependencies {
+    // 现有的保持不变...
+
+    // 可选：图表库（时间趋势图）
+    implementation("com.patrykandpatryk.vico:compose-m3:2.0.0-alpha.28")
+
+    // 可选：更好的日期处理
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+}
+```
+
+---
+
+## 9. 实施路线图
+
+### Phase 1：基础重建（优先级：🔴 最高）
+
+> 目标：删除旧代码，建立新数据模型，实现核心游戏循环。
+
+**步骤：**
+
+1. **删除旧 Entity/DAO/Repository**
+   - 删除：`TaskEntity`, `ShopItemEntity`, `PurchaseRecordEntity`, `ActivityRecord`
+   - 删除：对应的 DAO、Repository
+   - 删除：`TaskViewModel`, `ShopViewModel`（如果存在）
+   - 删除：所有 Task/Shop 相关的 Screen
+
+2. **创建新 Entity**
+   - `TimeSessionEntity`
+   - `EquipmentEntity`
+   - `TimeAssetEntity`
+   - 更新 `CharacterEntity`, `SkillEntity`, `AchievementEntity`
+
+3. **创建新 DAO**
+   - `TimeSessionDao`
+   - `EquipmentDao`
+   - `TimeAssetDao`
+   - 更新现有 DAO
+
+4. **创建领域层**
+   - `domain/model/` — 领域模型
+   - `domain/calculator/` — ExpCalculator, GoldCalculator, AttributeCalculator, EquipmentEffectCalculator
+   - `domain/game/` — GameEngine, AchievementChecker, DailyReset
+
+5. **创建新 Repository**
+   - `TimeSessionRepository`
+   - `EquipmentRepository`
+   - `TimeAssetRepository`
+   - 更新 `CharacterRepository`, `SkillRepository`
+
+6. **更新 Database**
+   - 版本号 → 4
+   - 更新实体列表
+   - 保持 destructive migration
+
+7. **更新 Hilt Module**
+   - 注册新 DAO、Repository
+
+### Phase 2：核心 UI（优先级：🔴 最高）
+
+> 目标：实现 AdventureScreen，让核心游戏循环可以运行。
+
+**步骤：**
+
+1. **更新导航**
+   - `Screen.kt` — 新的 Screen 定义
+   - `NavGraph.kt` — 4-tab 导航
+
+2. **AdventureScreen**
+   - 角色状态栏（头像、等级、EXP、HP/SP/金币）
+   - 计时器区域（开始/暂停/停止）
+   - 活动选择器（选择类型+关联技能）
+   - 今日进度（投资/消耗时间、连续天数、装备效果）
+   - 今日技能进度
+
+3. **AdventureViewModel**
+   - 计时器逻辑（从 TimerViewModel 迁移+增强）
+   - 调用 GameEngine.settleSession()
+   - 今日数据查询
+
+4. **SessionCompleteOverlay**
+   - 结算弹窗（经验/金币/技能进度/装备效果）
+
+5. **更新 Theme/Components**
+   - 保持像素风，但调整配色和组件以适配新布局
+
+### Phase 3：技能地图（优先级：🟡 高）
+
+> 目标：实现 SkillMapScreen + SkillDetailScreen。
+
+**步骤：**
+
+1. **SkillMapScreen**
+   - 技能树展示（按类别分组）
+   - 前置条件显示（🔒/✅）
+   - 筛选功能
+
+2. **SkillDetailScreen**
+   - 技能详情（等级、投入时间、近7天图表）
+   - 解锁路径
+   - 关联装备
+   - "开始修炼"按钮（跳转到 AdventureScreen 并自动选择该技能）
+
+3. **SkillViewModel 更新**
+   - 技能解锁逻辑
+   - 技能树构建
+
+### Phase 4：时间账本（优先级：🟡 高）
+
+> 目标：实现 LedgerScreen。
+
+**步骤：**
+
+1. **LedgerScreen**
+   - 时间资产负债表
+   - 今日时间分布
+   - 近7天趋势图
+   - 日/周/月切换
+
+2. **LedgerViewModel**
+   - TimeAsset 查询
+   - 统计计算
+
+### Phase 5：装备系统（优先级：🟠 中）
+
+> 目标：实现装备管理 UI + 装备效果计算。
+
+**步骤：**
+
+1. **EquipmentScreen**（在 Settings 下）
+   - 4个装备槽位
+   - 装备列表（已拥有/可购买/可解锁）
+   - 装备详情（效果、耐久、维护方式）
+
+2. **EquipmentEffectCalculator 完善**
+   - 所有 effectType 的计算逻辑
+   - 装备叠加计算
+
+3. **耐久度系统**
+   - 每日重置时的耐久检查
+   - 维护活动检测
+   - 装备损坏通知
+
+4. **种子装备数据**
+   - 初始装备（见附录）
+
+### Phase 6：成就系统（优先级：🟠 中）
+
+> 目标：重新设计成就系统。
+
+**步骤：**
+
+1. **AchievementsScreen**（在 Settings 下）
+   - 成就列表（按类别分组）
+   - 里程碑成就高亮
+   - 未解锁成就显示条件
+
+2. **AchievementChecker 重写**
+   - 新的 ConditionType
+   - 成就奖励（exp + gold + equipment）
+
+3. **种子成就数据**
+   - 初始成就（见附录）
+
+### Phase 7：完善与打磨（优先级：🟢 低）
+
+> 目标：边缘情况、动画、数据备份。
+
+**步骤：**
+
+1. **数据备份更新**
+   - DataBackupManager 适配新实体
+
+2. **动画与反馈**
+   - 升级动画
+   - 技能升级动画
+   - 装备获得动画
+   - 成就解锁动画
+
+3. **Widget / 通知**
+   - 每日提醒
+   - 连续天数提醒
+   - 装备损坏提醒
+
+4. **测试**
+   - ExpCalculator 单元测试
+   - GameEngine 集成测试
+   - Repository DAO 测试
+
+---
+
+## 10. 当前代码参考
+
+> 以下信息供实施时参考。**当前代码将被删除/重写，但某些逻辑可以迁移。**
+
+### 10.1 可迁移的逻辑
+
+| 当前代码 | 迁移到 | 说明 |
+|---------|--------|------|
+| `CharacterRepository.addExp()` 的升级循环 | `GameEngine` | 升级循环逻辑保留，公式更新 |
+| `SkillRepository.addSkillExp()` 的技能升级循环 | `GameEngine` | 技能升级逻辑保留，公式更新 |
+| `TimerViewModel` 的计时器逻辑 | `AdventureViewModel` | 计时器核心逻辑迁移 |
+| `TimerService` 前台服务 | `TimerService` | 保持不变，只更新回调 |
+| `AchievementManager` 的检查逻辑 | `AchievementChecker` | 扩展条件类型 |
+| `DataBackupManager` | `DataBackupManager` | 适配新实体 |
+| `SettingsPreferences` | `SettingsPreferences` | 保持不变 |
+| `Theme.kt / Color.kt / Typography.kt` | 同 | 保持像素风，微调配色 |
+| `PixelComponents.kt` | 同 | 保留并扩展 |
+
+### 10.2 必须删除的代码
+
+| 文件/类 | 原因 |
+|---------|------|
+| `TaskEntity` | 被 `TimeSessionEntity` 取代 |
+| `TaskDao` | 同上 |
+| `TaskRepository` | 同上 |
+| `TaskViewModel` | 同上 |
+| `TaskScreen` / `TaskDetailScreen` | 同上 |
+| `ShopItemEntity` | 被 `EquipmentEntity` 取代 |
+| `PurchaseRecordEntity` | 装备直接用 `owned`+`active` 字段 |
+| `ShopDao` | 被 `EquipmentDao` 取代 |
+| `ShopRepository` | 被 `EquipmentRepository` 取代 |
+| `ShopScreen` | 被 `EquipmentScreen` 取代 |
+| `ActivityRecord` | 被 `TimeSessionEntity` 取代 |
+| `ActivityDao` | 被 `TimeSessionDao` 取代 |
+| `TimerViewModel` | 迁移到 `AdventureViewModel` |
+| `StatsScreen` | 被 `LedgerScreen` 取代 |
+| `CharacterScreen` | 被整合进 `AdventureScreen` |
+
+### 10.3 当前文件完整列表
+
+<details>
+<summary>点击展开</summary>
+
+```
+app/src/main/java/com/lifeup/app/
+├── data/
+│   ├── db/
+│   │   ├── LifeUpDatabase.kt
+│   │   ├── dao/
+│   │   │   ├── CharacterDao.kt
+│   │   │   ├── TaskDao.kt
+│   │   │   ├── SkillDao.kt
+│   │   │   ├── AchievementDao.kt
+│   │   │   ├── ShopDao.kt
+│   │   │   └── ActivityDao.kt
+│   │   └── entity/
+│   │       ├── CharacterEntity.kt
+│   │       ├── TaskEntity.kt
+│   │       ├── SkillEntity.kt
+│   │       ├── AchievementEntity.kt
+│   │       ├── ShopItemEntity.kt
+│   │       ├── PurchaseRecordEntity.kt
+│   │       └── ActivityRecord.kt
+│   ├── repository/
+│   │   ├── CharacterRepository.kt
+│   │   ├── TaskRepository.kt
+│   │   ├── SkillRepository.kt
+│   │   ├── AchievementRepository.kt
+│   │   ├── ShopRepository.kt
+│   │   └── ActivityRepository.kt
+│   ├── preferences/
+│   │   └── SettingsPreferences.kt
+│   └── backup/
+│       └── DataBackupManager.kt
+├── ui/
+│   ├── navigation/
+│   │   ├── Screen.kt
+│   │   └── NavGraph.kt
+│   ├── theme/
+│   │   ├── Color.kt
+│   │   ├── Theme.kt
+│   │   └── Typography.kt
+│   ├── components/
+│   │   └── PixelComponents.kt
+│   ├── character/
+│   │   ├── CharacterScreen.kt
+│   │   └── CharacterViewModel.kt
+│   ├── task/
+│   │   ├── TaskScreen.kt
+│   │   ├── TaskDetailScreen.kt
+│   │   └── TaskViewModel.kt
+│   ├── timer/
+│   │   ├── TimerScreen.kt
+│   │   └── TimerViewModel.kt
+│   ├── skill/
+│   │   ├── SkillScreen.kt
+│   │   ├── SkillDetailScreen.kt
+│   │   └── SkillViewModel.kt
+│   ├── stats/
+│   │   ├── StatsScreen.kt
+│   │   └── StatsViewModel.kt
+│   ├── achievement/
+│   │   ├── AchievementScreen.kt
+│   │   └── AchievementViewModel.kt
+│   ├── shop/
+│   │   ├── ShopScreen.kt
+│   │   └── ShopViewModel.kt
+│   └── settings/
+│       └── SettingsScreen.kt
+├── service/
+│   └── TimerService.kt
+├── achievement/
+│   ├── AchievementManager.kt
+│   ├── AchievementEventBus.kt
+│   └── AchievementUnlockEvent.kt
+├── di/
+│   ├── DatabaseModule.kt
+│   └── RepositoryModule.kt
+└── LifeUpApplication.kt
+```
+
+</details>
+
+---
+
+## 11. 附录：种子数据
+
+### 11.1 种子技能
+
+> 首次启动时插入，玩家可以添加更多。
+
+```kotlin
+val defaultSkills = listOf(
+    // 职业技能
+    SkillEntity(name = "编程", category = "professional", icon = "💻", description = "软件开发与编程能力"),
+    SkillEntity(name = "英语", category = "language", icon = "🗣️", description = "英语听说读写"),
+    SkillEntity(name = "数据分析", category = "professional", icon = "📊", description = "数据思维与分析能力",
+        parentSkillId = 1, parentLevelRequired = 3, unlocked = false),  // 需要编程Lv3
+    SkillEntity(name = "Web开发", category = "professional", icon = "🌐", description = "全栈Web开发",
+        parentSkillId = 1, parentLevelRequired = 5, unlocked = false),  // 需要编程Lv5
+
+    // 运动技能
+    SkillEntity(name = "跑步", category = "sport", icon = "🏃", description = "跑步耐力与速度"),
+    SkillEntity(name = "力量训练", category = "sport", icon = "💪", description = "力量与肌肉训练"),
+
+    // 艺术技能
+    SkillEntity(name = "写作", category = "art", icon = "✍️", description = "文字表达与创作"),
+
+    // 生活技能
+    SkillEntity(name = "冥想", category = "life", icon = "🧘", description = "正念冥想与内心平静"),
+    SkillEntity(name = "烹饪", category = "life", icon = "🍳", description = "烹饪与健康饮食"),
+)
+```
+
+### 11.2 种子装备
+
+```kotlin
+val defaultEquipment = listOf(
+    // 习惯槽
+    EquipmentEntity(
+        name = "早起仪式",
+        description = "每日首次计时经验+20%",
+        icon = "🌅",
+        slot = "habit",
+        effectType = "first_daily_bonus",
+        effectValue = 0.2,
+        effectTarget = "all",
+        maxDurability = 30,
+        currentDurability = 30,
+        maintenanceActivity = "planning",  // 每日做规划 = 维护早起仪式
+        source = "shop",
+        price = 300
+    ),
+    EquipmentEntity(
+        name = "运动习惯",
+        description = "运动类活动经验+15%",
+        icon = "🏃",
+        slot = "habit",
+        effectType = "exp_multiplier",
+        effectValue = 0.15,
+        effectTarget = "sport",
+        maxDurability = 30,
+        currentDurability = 30,
+        maintenanceActivity = "exercise",
+        source = "skill_unlock",
+        price = 0
+    ),
+
+    // 工具槽
+    EquipmentEntity(
+        name = "深度专注",
+        description = "连续计时>45分钟额外+10%",
+        icon = "🎯",
+        slot = "tool",
+        effectType = "long_session_bonus",
+        effectValue = 0.1,
+        effectTarget = "45",
+        maxDurability = 30,
+        currentDurability = 30,
+        maintenanceActivity = "study",  // 每日学习 = 维护深度专注
+        source = "shop",
+        price = 500
+    ),
+    EquipmentEntity(
+        name = "番茄工作法",
+        description = "每完成一个25分钟时段额外+5%经验",
+        icon = "🍅",
+        slot = "tool",
+        effectType = "exp_multiplier",
+        effectValue = 0.05,
+        effectTarget = "all",
+        maxDurability = 30,
+        currentDurability = 30,
+        maintenanceActivity = "coding",
+        source = "shop",
+        price = 200
+    ),
+
+    // 心态槽
+    EquipmentEntity(
+        name = "成长思维",
+        description = "所有活动经验+8%",
+        icon = "🌱",
+        slot = "mindset",
+        effectType = "exp_multiplier",
+        effectValue = 0.08,
+        effectTarget = "all",
+        maxDurability = 60,  // 心态更持久
+        currentDurability = 60,
+        maintenanceActivity = "reading",  // 每日阅读 = 维护成长思维
+        source = "achievement_reward",
+        price = 0
+    ),
+    EquipmentEntity(
+        name = "坚韧意志",
+        description = "连续天数每7天+3%经验",
+        icon = "💎",
+        slot = "mindset",
+        effectType = "streak_bonus",
+        effectValue = 0.03,
+        effectTarget = "7",
+        maxDurability = 60,
+        currentDurability = 60,
+        maintenanceActivity = "meditation",
+        source = "skill_unlock",
+        price = 0
+    ),
+
+    // 环境槽
+    EquipmentEntity(
+        name = "整洁空间",
+        description = "每日精力恢复+2",
+        icon = "✨",
+        slot = "environment",
+        effectType = "sp_recovery",
+        effectValue = 2.0,
+        effectTarget = "",
+        maxDurability = 14,  // 环境容易退化
+        currentDurability = 14,
+        maintenanceActivity = "cooking",  // 做家务/烹饪 = 维护环境
+        source = "shop",
+        price = 150
+    ),
+)
+```
+
+### 11.3 种子成就
+
+```kotlin
+val defaultAchievements = listOf(
+    // 时间投资
+    AchievementEntity(title = "时间新手", description = "累计投资10小时", icon = "⏰",
+        category = "time_invested", conditionType = "TOTAL_INVESTED_HOURS", conditionValue = 10,
+        rewardExp = 50, rewardGold = 20),
+    AchievementEntity(title = "时间行者", description = "累计投资100小时", icon = "⏳",
+        category = "time_invested", conditionType = "TOTAL_INVESTED_HOURS", conditionValue = 100,
+        rewardExp = 500, rewardGold = 200, isMilestone = true),
+    AchievementEntity(title = "时间大师", description = "累计投资1000小时", icon = "⌛",
+        category = "time_invested", conditionType = "TOTAL_INVESTED_HOURS", conditionValue = 1000,
+        rewardExp = 5000, rewardGold = 2000, isMilestone = true),
+
+    // 技能精通
+    AchievementEntity(title = "初窥门径", description = "任意技能达到Lv5", icon = "📖",
+        category = "skill_mastery", conditionType = "ANY_SKILL_LEVEL", conditionValue = 5,
+        rewardExp = 100, rewardGold = 50),
+    AchievementEntity(title = "登堂入室", description = "任意技能达到Lv10", icon = "📚",
+        category = "skill_mastery", conditionType = "ANY_SKILL_LEVEL", conditionValue = 10,
+        rewardExp = 500, rewardGold = 200, isMilestone = true),
+    AchievementEntity(title = "融会贯通", description = "任意技能达到Lv20", icon = "🎓",
+        category = "skill_mastery", conditionType = "ANY_SKILL_LEVEL", conditionValue = 20,
+        rewardExp = 5000, rewardGold = 2000, isMilestone = true),
+
+    // 连续
+    AchievementEntity(title = "七日之约", description = "连续7天投资时间", icon = "🔥",
+        category = "streak", conditionType = "STREAK_DAYS", conditionValue = 7,
+        rewardExp = 200, rewardGold = 100),
+    AchievementEntity(title = "月度坚持", description = "连续30天投资时间", icon = "🌟",
+        category = "streak", conditionType = "STREAK_DAYS", conditionValue = 30,
+        rewardExp = 1000, rewardGold = 500, isMilestone = true),
+    AchievementEntity(title = "百日筑基", description = "连续100天投资时间", icon = "💎",
+        category = "streak", conditionType = "STREAK_DAYS", conditionValue = 100,
+        rewardExp = 10000, rewardGold = 5000, isMilestone = true),
+
+    // 多样性
+    AchievementEntity(title = "多面手", description = "3个不同技能达到Lv3", icon = "🎭",
+        category = "diversity", conditionType = "SKILL_COUNT_AT_LEVEL", conditionValue = 3,
+        rewardExp = 300, rewardGold = 150),
+
+    // 投资比率
+    AchievementEntity(title = "时间管家", description = "投资比率>70%持续7天", icon = "📊",
+        category = "time_invested", conditionType = "INVESTMENT_RATIO", conditionValue = 7,
+        rewardExp = 200, rewardGold = 100),
+
+    // 角色
+    AchievementEntity(title = "初出茅庐", description = "角色达到Lv10", icon = "⚔️",
+        category = "life_event", conditionType = "CHARACTER_LEVEL", conditionValue = 10,
+        rewardExp = 500, rewardGold = 200),
+    AchievementEntity(title = "小有所成", description = "角色达到Lv20", icon = "🛡️",
+        category = "life_event", conditionType = "CHARACTER_LEVEL", conditionValue = 20,
+        rewardExp = 2000, rewardGold = 1000, isMilestone = true),
+)
+```
+
+### 11.4 活动类型到技能类别的映射
+
+```kotlin
+val activityToSkillCategory = mapOf(
+    "coding" to "professional",
+    "study" to "professional",
+    "reading" to "professional",
+    "language" to "language",
+    "exercise" to "sport",
+    "art" to "art",
+    "social" to "social",
+    "cooking" to "life",
+    "meditation" to "life",
+    "planning" to "life",
+    "other_invest" to "general",
+    // 消耗性活动不映射到技能
+)
+
+val investmentActivities = setOf(
+    "coding", "study", "reading", "language", "exercise",
+    "art", "social", "cooking", "meditation", "planning", "other_invest"
+)
+
+val consumableActivities = setOf(
+    "scrolling", "gaming", "idle", "commute", "other_consume"
+)
+```
+
+---
+
+## 实施检查清单
+
+> 每完成一步，勾选对应项。
+
+### Phase 1
+- [ ] 删除 TaskEntity/TaskDao/TaskRepository 及相关 Screen
+- [ ] 删除 ShopItemEntity/PurchaseRecordEntity/ShopDao/ShopRepository 及相关 Screen
+- [ ] 删除 ActivityRecord/ActivityDao/ActivityRepository
+- [ ] 创建 TimeSessionEntity + TimeSessionDao + TimeSessionRepository
+- [ ] 创建 EquipmentEntity + EquipmentDao + EquipmentRepository
+- [ ] 创建 TimeAssetEntity + TimeAssetDao + TimeAssetRepository
+- [ ] 更新 CharacterEntity（luck 字段）
+- [ ] 更新 SkillEntity（totalMinutesInvested, parentLevelRequired, attributeContribution）
+- [ ] 更新 AchievementEntity（category, rewardEquipmentId, isMilestone）
+- [ ] 更新 LifeUpDatabase（version 4, 新实体列表）
+- [ ] 创建 domain/model/ 领域模型
+- [ ] 创建 domain/calculator/ 计算引擎
+- [ ] 创建 domain/game/ 游戏逻辑
+- [ ] 更新 Hilt Module
+
+### Phase 2
+- [ ] 更新 Screen.kt 导航定义
+- [ ] 更新 NavGraph.kt 4-tab 导航
+- [ ] 实现 AdventureScreen
+- [ ] 实现 AdventureViewModel（计时器+GameEngine调用）
+- [ ] 实现 SessionCompleteOverlay
+- [ ] 更新 PixelComponents.kt
+
+### Phase 3
+- [ ] 实现 SkillMapScreen
+- [ ] 实现 SkillDetailScreen
+- [ ] 更新 SkillViewModel
+
+### Phase 4
+- [ ] 实现 LedgerScreen
+- [ ] 实现 LedgerViewModel
+
+### Phase 5
+- [ ] 实现 EquipmentScreen
+- [ ] 实现装备效果计算
+- [ ] 实现耐久度系统
+- [ ] 插入种子装备数据
+
+### Phase 6
+- [ ] 实现 AchievementsScreen
+- [ ] 重写 AchievementChecker
+- [ ] 插入种子成就数据
+
+### Phase 7
+- [ ] 更新 DataBackupManager
+- [ ] 实现动画与反馈
+- [ ] 编写测试
+
+---
+
+**文档版本：** 1.0
+**创建日期：** 2026-06-10
+**适用版本：** LifeUp v2.0.0（完整重设计）
