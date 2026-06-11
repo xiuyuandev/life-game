@@ -33,7 +33,7 @@ import com.lifeup.app.data.db.entity.TodoEntity
         CharacterStateEntity::class,
         AchievementEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -154,6 +154,21 @@ abstract class LifeUpDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                val cursor = db.query("PRAGMA table_info(daily_states)")
+                val columnNames = mutableListOf<String>()
+                while (cursor.moveToNext()) {
+                    columnNames.add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+                }
+                cursor.close()
+
+                if (!columnNames.contains("last_updated")) {
+                    db.execSQL("ALTER TABLE daily_states ADD COLUMN last_updated INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        }
+
         fun getDatabase(context: Context): LifeUpDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -161,7 +176,7 @@ abstract class LifeUpDatabase : RoomDatabase() {
                     LifeUpDatabase::class.java,
                     "lifeup_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .build()
                 INSTANCE = instance
                 instance

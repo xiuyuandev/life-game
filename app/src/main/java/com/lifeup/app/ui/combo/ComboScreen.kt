@@ -87,6 +87,8 @@ fun ComboScreen(
     viewModel: ComboViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var comboToDelete by remember { mutableStateOf<com.lifeup.app.domain.model.Combo?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     ScreenScaffold(
         title = "🔗 技能组合",
@@ -135,7 +137,10 @@ fun ComboScreen(
                     primarySkill = primarySkill,
                     secondarySkill = secondarySkill,
                     onToggleActive = { viewModel.toggleComboActive(combo.id) },
-                    onDelete = { viewModel.deleteCombo(combo.id) }
+                    onDelete = {
+                        comboToDelete = combo
+                        showDeleteConfirm = true
+                    }
                 )
             }
         }
@@ -172,6 +177,39 @@ fun ComboScreen(
             onSelectSecondary = { viewModel.selectSecondarySkill(it) },
             onNameChange = { viewModel.updateComboName(it) },
             onConfirm = { viewModel.createCombo() }
+        )
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirm = false
+                comboToDelete = null
+            },
+            title = { Text("确认删除") },
+            text = { Text("确认删除组合\"${comboToDelete?.name}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        comboToDelete?.let { viewModel.deleteCombo(it.id) }
+                        showDeleteConfirm = false
+                        comboToDelete = null
+                    }
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        comboToDelete = null
+                    }
+                ) {
+                    Text("取消")
+                }
+            }
         )
     }
 }

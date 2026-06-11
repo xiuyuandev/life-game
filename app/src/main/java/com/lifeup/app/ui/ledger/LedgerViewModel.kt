@@ -52,7 +52,8 @@ data class LedgerUiState(
     val entries: List<LedgerEntry> = emptyList(),
     val groupedEntries: Map<String, List<LedgerEntry>> = emptyMap(),
     val monthlySummary: MonthlySummary = MonthlySummary(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val filterType: RecordType? = null
 )
 
 @HiltViewModel
@@ -112,6 +113,10 @@ class LedgerViewModel @Inject constructor(
             return
         }
         selectMonth(date)
+    }
+
+    fun setFilterType(filterType: RecordType?) {
+        _uiState.update { it.copy(filterType = filterType) }
     }
 
     private fun loadMonthData(month: String) {

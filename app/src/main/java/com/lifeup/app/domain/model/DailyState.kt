@@ -12,5 +12,6 @@ data class DailyState(
     val todosCompleted: Int = 0,
     val habitsCompleted: Int = 0,
     val goldEarned: Int = 0,
-    val goldSpent: Int = 0
+    val goldSpent: Int = 0,
+    val lastUpdated: Long = System.currentTimeMillis()
 )

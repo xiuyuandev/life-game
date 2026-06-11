@@ -21,7 +21,7 @@ object AttributeCalculator {
     }
 
     fun getEnergyCap(baseCap: Int, characterLevel: Int): Int {
-        val bonus = min(characterLevel, 10) * 0.5
-        return baseCap + bonus.toInt().coerceAtMost(5)
+        val bonus = characterLevel * 2
+        return baseCap + bonus.coerceAtMost(50)
     }
 }

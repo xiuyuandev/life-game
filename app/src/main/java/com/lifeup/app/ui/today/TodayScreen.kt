@@ -45,7 +45,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -96,8 +99,12 @@ fun TodayScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var addAsHabit by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var itemToDelete by remember { mutableStateOf<Todo?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -227,8 +234,9 @@ fun TodayScreen(
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteTodo(habit.id)
-                                    true
+                                    itemToDelete = habit
+                                    showDeleteConfirm = true
+                                    false
                                 } else false
                             }
                         )
@@ -243,7 +251,10 @@ fun TodayScreen(
                                     HapticFeedbackHelper.performTick(context)
                                     viewModel.toggleTodo(habit.id)
                                 },
-                                onDelete = { viewModel.deleteTodo(habit.id) }
+                                onDelete = {
+                                    itemToDelete = habit
+                                    showDeleteConfirm = true
+                                }
                             )
                         }
                     }
@@ -276,8 +287,9 @@ fun TodayScreen(
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                    viewModel.deleteTodo(todo.id)
-                                    true
+                                    itemToDelete = todo
+                                    showDeleteConfirm = true
+                                    false
                                 } else false
                             }
                         )
@@ -292,7 +304,10 @@ fun TodayScreen(
                                     HapticFeedbackHelper.performTick(context)
                                     viewModel.toggleTodo(todo.id)
                                 },
-                                onDelete = { viewModel.deleteTodo(todo.id) }
+                                onDelete = {
+                                    itemToDelete = todo
+                                    showDeleteConfirm = true
+                                }
                             )
                         }
                     }
@@ -321,6 +336,42 @@ fun TodayScreen(
                 }
             )
         }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirm && itemToDelete != null) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirm = false
+                itemToDelete = null
+            },
+            title = { Text("确认删除") },
+            text = { Text("确认删除\"${itemToDelete?.title}\"?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteTodo(itemToDelete!!.id)
+                        showDeleteConfirm = false
+                        itemToDelete = null
+                        viewModel.viewModelScope.launch {
+                            snackbarHostState.showSnackbar("已删除")
+                        }
+                    }
+                ) {
+                    Text("删除")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirm = false
+                        itemToDelete = null
+                    }
+                ) {
+                    Text("取消")
+                }
+            }
+        )
     }
 
     // Add todo/habit dialog

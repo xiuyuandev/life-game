@@ -55,6 +55,7 @@ class TimerViewModel @Inject constructor(
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
     private val goldRepository: GoldRepository,
+    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs,
     private val application: Application
 ) : ViewModel() {
 
@@ -145,7 +146,8 @@ class TimerViewModel @Inject constructor(
                     itemRepository = itemRepository,
                     characterStateRepository = characterStateRepository,
                     achievementRepository = achievementRepository,
-                    goldRepository = goldRepository
+                    goldRepository = goldRepository,
+                    settingsPrefs = settingsPrefs
                 )
                 _uiState.update {
                     it.copy(

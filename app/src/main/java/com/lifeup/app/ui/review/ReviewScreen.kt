@@ -96,16 +96,30 @@ fun ReviewScreen(
         title = "📊 柳比歇夫复盘",
         onNavigateBack = onNavigateBack
     ) {
-        // Date Selector
-        item {
-            DateSelector(
-                displayDate = uiState.displayDate,
-                onPreviousDay = { viewModel.selectPreviousDay() },
-                onNextDay = { viewModel.selectNextDay() },
-                selectedDate = uiState.selectedDate,
-                onDateSelected = { viewModel.selectDate(it) }
-            )
-        }
+        when {
+            uiState.isLoading -> {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            else -> {
+                // Date Selector
+                item {
+                    DateSelector(
+                        displayDate = uiState.displayDate,
+                        onPreviousDay = { viewModel.selectPreviousDay() },
+                        onNextDay = { viewModel.selectNextDay() },
+                        selectedDate = uiState.selectedDate,
+                        onDateSelected = { viewModel.selectDate(it) }
+                    )
+                }
 
         // Daily Summary Card
         item {
@@ -184,6 +198,7 @@ fun ReviewScreen(
                     maxMinutes = uiState.skillBreakdowns.first().minutes,
                     formatMinutes = { viewModel.formatMinutes(it) }
                 )
+            }
             }
         }
     }

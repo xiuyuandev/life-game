@@ -1,6 +1,7 @@
 package com.lifeup.app.ui.ledger
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,6 +73,14 @@ fun LedgerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val filteredGroupedEntries = if (uiState.filterType != null) {
+        uiState.groupedEntries.mapValues { (_, entries) ->
+            entries.filter { it.recordType == uiState.filterType }
+        }.filter { (_, entries) -> entries.isNotEmpty() }
+    } else {
+        uiState.groupedEntries
+    }
+
     ScreenScaffold(
         title = "📒 时间账本",
         onNavigateBack = onNavigateBack
@@ -85,37 +94,62 @@ fun LedgerScreen(
             )
         }
 
-        // Monthly summary card
+        // Filter chips
         item {
-            MonthlySummaryCard(
-                summary = uiState.monthlySummary,
-                formatMinutes = { viewModel.formatMinutes(it) }
+            FilterChipRow(
+                selectedFilter = uiState.filterType,
+                onFilterSelected = { viewModel.setFilterType(it) }
             )
         }
 
-        // Daily entries
-        if (uiState.groupedEntries.isEmpty()) {
-            item {
-                EmptyStateMessage(text = "该月暂无时间记录")
-            }
-        } else {
-            uiState.groupedEntries.forEach { (dateHeader, entries) ->
+        when {
+            uiState.isLoading -> {
                 item {
-                    DateHeader(
-                        date = dateHeader,
-                        totalMinutes = entries.sumOf { it.durationMinutes },
-                        netGold = entries.sumOf {
-                            if (it.recordType == RecordType.INVESTMENT) it.goldAmount else -it.goldAmount
-                        },
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            filteredGroupedEntries.isEmpty() -> {
+                item {
+                    EmptyStateMessage(
+                        text = if (uiState.filterType != null) "该筛选条件下暂无记录" else "该月暂无时间记录"
+                    )
+                }
+            }
+            else -> {
+                // Monthly summary card
+                item {
+                    MonthlySummaryCard(
+                        summary = uiState.monthlySummary,
                         formatMinutes = { viewModel.formatMinutes(it) }
                     )
                 }
 
-                items(
-                    items = entries,
-                    key = { "entry-${it.timestamp}-${it.skillName}" }
-                ) { entry ->
-                    LedgerEntryItem(entry = entry)
+                // Daily entries
+                filteredGroupedEntries.forEach { (dateHeader, entries) ->
+                    item {
+                        DateHeader(
+                            date = dateHeader,
+                            totalMinutes = entries.sumOf { it.durationMinutes },
+                            netGold = entries.sumOf {
+                                if (it.recordType == RecordType.INVESTMENT) it.goldAmount else -it.goldAmount
+                            },
+                            formatMinutes = { viewModel.formatMinutes(it) }
+                        )
+                    }
+
+                    items(
+                        items = entries,
+                        key = { "entry-${it.timestamp}-${it.skillName}" }
+                    ) { entry ->
+                        LedgerEntryItem(entry = entry)
+                    }
                 }
             }
         }
@@ -422,6 +456,73 @@ private fun LedgerEntryItem(entry: LedgerEntry) {
                 color = if (isInvestment) Color(0xFF00BFA5) else Color(0xFFFF8A50)
             )
         }
+    }
+}
+
+@Composable
+private fun FilterChipRow(
+    selectedFilter: RecordType?,
+    onFilterSelected: (RecordType?) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(
+            label = "全部",
+            selected = selectedFilter == null,
+            onClick = { onFilterSelected(null) },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            label = "投资",
+            selected = selectedFilter == RecordType.INVESTMENT,
+            onClick = { onFilterSelected(RecordType.INVESTMENT) },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            label = "消耗",
+            selected = selectedFilter == RecordType.CONSUMPTION,
+            onClick = { onFilterSelected(RecordType.CONSUMPTION) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun FilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .padding(vertical = 8.dp)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
 

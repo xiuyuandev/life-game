@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,13 +23,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -120,8 +126,10 @@ private val levelLabel: (Int) -> String = { level ->
 fun SkillCard(
     skill: Skill,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     val isNew = (System.currentTimeMillis() - skill.createdAt) < 3 * 24 * 60 * 60 * 1000L
     val totalHours = skill.totalMinutes / 60
     val progress = skill.getProgressToNextLevel()
@@ -148,19 +156,31 @@ fun SkillCard(
         shape = RoundedCornerShape(16.dp),
         border = CardDefaults.outlinedCardBorder(enabled = false)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    onClick = onClick,
-                    onClickLabel = "查看技能详情",
-                    indication = rememberRipple(
-                        color = categoryColor.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                    interactionSource = remember { MutableInteractionSource() }
-                )
-        ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(
+                        onClick = onClick,
+                        onClickLabel = "查看技能详情",
+                        indication = rememberRipple(
+                            color = categoryColor.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                        interactionSource = remember { MutableInteractionSource() }
+                    )
+                    .then(
+                        if (onLongClick != null) {
+                            Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        menuExpanded = true
+                                    }
+                                )
+                            }
+                        } else Modifier
+                    )
+            ) {
             // Category accent bar at top
             Box(
                 modifier = Modifier
@@ -338,6 +358,33 @@ fun SkillCard(
                         )
                     }
                 }
+            }
+
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("暂停") },
+                    onClick = {
+                        menuExpanded = false
+                        // 暂停逻辑由调用方处理，此处仅关闭菜单
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("归档") },
+                    onClick = {
+                        menuExpanded = false
+                        // 归档逻辑由调用方处理，此处仅关闭菜单
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("删除") },
+                    onClick = {
+                        menuExpanded = false
+                        onLongClick?.invoke()
+                    }
+                )
             }
         }
     }

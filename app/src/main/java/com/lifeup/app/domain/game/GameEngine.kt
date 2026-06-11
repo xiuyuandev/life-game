@@ -48,7 +48,8 @@ object GameEngine {
         itemRepository: ItemRepository,
         characterStateRepository: CharacterStateRepository,
         achievementRepository: AchievementRepository,
-        goldRepository: com.lifeup.app.domain.repository.GoldRepository
+        goldRepository: com.lifeup.app.domain.repository.GoldRepository,
+        settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs
     ): TimerResult {
         return try {
             // Input validation
@@ -72,6 +73,11 @@ object GameEngine {
             val energyCost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
             if (dailyState.energy < energyCost) {
                 throw IllegalStateException("能量不足，需要 $energyCost 能量，当前 ${dailyState.energy.toInt()}")
+            }
+
+            // Check first timer from SettingsPrefs (single source of truth)
+            val isFirstTimerToday = withTimeout(5000) {
+                settingsPrefs.isFirstTimerUsedToday().first()
             }
 
             // a. Create a TimeRecord
@@ -104,7 +110,6 @@ object GameEngine {
                 comboRepository.getActiveCombos().first()
             }
             val streakDays = dailyState.streakCount
-            val isFirstTimerToday = dailyState.isFirstTimerUsed
             val dailyInvestmentMinutes = dailyState.investmentMinutes
 
             val expGained = ExpCalculator.calculateExp(
@@ -134,15 +139,22 @@ object GameEngine {
                 RecordType.INVESTMENT -> dailyState.copy(
                     investmentMinutes = dailyState.investmentMinutes + durationMinutes,
                     goldEarned = dailyState.goldEarned + goldGained,
-                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f)
+                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f),
+                    lastUpdated = System.currentTimeMillis()
                 )
                 RecordType.CONSUMPTION -> dailyState.copy(
                     consumptionMinutes = dailyState.consumptionMinutes + durationMinutes,
                     goldEarned = dailyState.goldEarned + goldGained,
-                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f)
+                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f),
+                    lastUpdated = System.currentTimeMillis()
                 )
             }
             dailyStateRepository.insertOrUpdateState(updatedDailyState)
+
+            // Mark first timer as used
+            if (!isFirstTimerToday) {
+                settingsPrefs.setFirstTimerUsedToday(true)
+            }
 
             // g. Check for item unlocks on level up
             val itemsUnlocked = if (leveledUp) {

@@ -54,7 +54,8 @@ class RetroactiveViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
-    private val goldRepository: GoldRepository
+    private val goldRepository: GoldRepository,
+    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RetroactiveUiState())
@@ -176,7 +177,8 @@ class RetroactiveViewModel @Inject constructor(
                     itemRepository = itemRepository,
                     characterStateRepository = characterStateRepository,
                     achievementRepository = achievementRepository,
-                    goldRepository = goldRepository
+                    goldRepository = goldRepository,
+                    settingsPrefs = settingsPrefs
                 )
 
                 _uiState.update { it.copy(isSaving = false, isSaved = true) }

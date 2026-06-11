@@ -86,13 +86,27 @@ fun StatsScreen(
         title = "📊 技能统计",
         onNavigateBack = onNavigateBack
     ) {
-        // Period selector
-        item {
-            PeriodSelector(
-                selectedPeriod = uiState.period,
-                onPeriodSelected = { viewModel.selectPeriod(it) }
-            )
-        }
+        when {
+            uiState.isLoading -> {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            else -> {
+                // Period selector
+                item {
+                    PeriodSelector(
+                        selectedPeriod = uiState.period,
+                        onPeriodSelected = { viewModel.selectPeriod(it) }
+                    )
+                }
 
         // Period navigation
         item {
@@ -159,6 +173,8 @@ fun StatsScreen(
         } else {
             item {
                 EmptyStateMessage(text = "该时段暂无技能记录")
+            }
+        }
             }
         }
     }

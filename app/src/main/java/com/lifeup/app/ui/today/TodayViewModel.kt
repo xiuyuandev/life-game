@@ -190,18 +190,15 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private fun calculateEnergy(habits: List<Todo>, todos: List<Todo>): Float {
-        var energy = 0f
-        val allItems = habits + todos
-        for (item in allItems) {
-            if (item.isCompleted) {
-                energy += when (item.priority) {
-                    Priority.HIGH -> 1.5f
-                    else -> 1f
-                }
-            }
-        }
-        return energy
+    /**
+     * Calculate energy regeneration based on elapsed time since last update.
+     * Energy regenerates at 5 points per hour, up to the energy cap.
+     */
+    private fun calculateRegeneratedEnergy(currentEnergy: Float, energyCap: Float, lastUpdatedMs: Long): Float {
+        if (currentEnergy >= energyCap) return currentEnergy
+        val hoursElapsed = ((System.currentTimeMillis() - lastUpdatedMs) / (60 * 60 * 1000.0)).coerceAtLeast(0.0)
+        val regenerated = (hoursElapsed * 5).toFloat()
+        return (currentEnergy + regenerated).coerceAtMost(energyCap)
     }
 
     fun toggleTodo(id: Long) {
@@ -296,14 +293,19 @@ class TodayViewModel @Inject constructor(
                 } catch (_: Exception) {
                     null
                 }
-                val state = dailyState ?: DailyState(date = todayStr)
-                val calculatedEnergy = calculateEnergy(_uiState.value.habits, _uiState.value.todos)
+                val state = dailyState ?: DailyState(date = todayStr, energy = 100f, energyCap = 100f)
 
-                _uiState.update { it.copy(energy = calculatedEnergy, energyCap = state.energyCap) }
+                // Regenerate energy based on elapsed time
+                val lastUpdated = state.lastUpdated.takeIf { it > 0 } ?: System.currentTimeMillis()
+                val regeneratedEnergy = calculateRegeneratedEnergy(state.energy, state.energyCap, lastUpdated)
 
-                dailyStateRepository.insertOrUpdateState(
-                    state.copy(energy = calculatedEnergy)
-                )
+                _uiState.update { it.copy(energy = regeneratedEnergy, energyCap = state.energyCap) }
+
+                if (regeneratedEnergy != state.energy) {
+                    dailyStateRepository.insertOrUpdateState(
+                        state.copy(energy = regeneratedEnergy, lastUpdated = System.currentTimeMillis())
+                    )
+                }
             } catch (_: Exception) {
             }
         }

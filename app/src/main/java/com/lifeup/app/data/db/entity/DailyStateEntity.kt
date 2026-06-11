@@ -38,5 +38,8 @@ data class DailyStateEntity(
     val goldEarned: Int = 0,
 
     @ColumnInfo(name = "gold_spent")
-    val goldSpent: Int = 0
+    val goldSpent: Int = 0,
+
+    @ColumnInfo(name = "last_updated")
+    val lastUpdated: Long = System.currentTimeMillis()
 )

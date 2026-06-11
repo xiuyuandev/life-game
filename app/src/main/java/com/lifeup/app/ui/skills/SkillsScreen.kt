@@ -19,8 +19,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -37,8 +39,13 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
@@ -51,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import com.lifeup.app.domain.model.Skill
 import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.ErrorState
 import com.lifeup.app.ui.components.SkillCard
@@ -68,6 +76,10 @@ fun SkillsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val gridState = rememberLazyGridState()
+    var searchQuery by remember { mutableStateOf("") }
+    val filteredSkills = uiState.skills.filter { it.name.contains(searchQuery, ignoreCase = true) }
+    var skillToDelete by remember { mutableStateOf<Skill?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -112,46 +124,106 @@ fun SkillsScreen(
                 )
             } else {
                 LazyVerticalGrid(
-                state = gridState,
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Title + Energy bar
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                    SkillsTopBar(
-                        energy = uiState.energy,
-                        energyCap = uiState.energyCap,
-                        onNavigateToCombo = onNavigateToCombo,
-                        onNavigateToShowcase = onNavigateToShowcase
-                    )
-                }
-
-                if (uiState.skills.isEmpty()) {
+                    state = gridState,
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Search bar
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        EmptySkillsState(onNavigateToCreateSkill = onNavigateToCreateSkill)
-                    }
-                } else {
-                    items(
-                        items = uiState.skills,
-                        key = { it.id }
-                    ) { skill ->
-                        SkillCard(
-                            skill = skill,
-                            onClick = { onNavigateToDetail(skill.id) },
-                            modifier = Modifier.animateItemPlacement()
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = { Text("搜索技能...") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "清除",
+                                        modifier = Modifier.clickable { searchQuery = "" }
+                                    )
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
-                }
 
-                // Bottom spacing for FAB
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                    Box(modifier = Modifier.padding(bottom = 72.dp))
+                    // Title + Energy bar
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        SkillsTopBar(
+                            energy = uiState.energy,
+                            energyCap = uiState.energyCap,
+                            onNavigateToCombo = onNavigateToCombo,
+                            onNavigateToShowcase = onNavigateToShowcase
+                        )
+                    }
+
+                    if (filteredSkills.isEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            EmptySkillsState(onNavigateToCreateSkill = onNavigateToCreateSkill)
+                        }
+                    } else {
+                        items(
+                            items = filteredSkills,
+                            key = { it.id }
+                        ) { skill ->
+                            SkillCard(
+                                skill = skill,
+                                onClick = { onNavigateToDetail(skill.id) },
+                                onLongClick = { skillToDelete = skill; showDeleteConfirm = true },
+                                modifier = Modifier.animateItemPlacement()
+                            )
+                        }
+                    }
+
+                    // Bottom spacing for FAB
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Box(modifier = Modifier.padding(bottom = 72.dp))
+                    }
                 }
             }
+
+            if (showDeleteConfirm && skillToDelete != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showDeleteConfirm = false
+                        skillToDelete = null
+                    },
+                    title = { Text("确认删除") },
+                    text = { Text("确定要删除技能「${skillToDelete!!.name}」吗？此操作不可撤销。") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                viewModel.deleteSkill(skillToDelete!!.id)
+                                showDeleteConfirm = false
+                                skillToDelete = null
+                            }
+                        ) {
+                            Text("删除", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = {
+                                showDeleteConfirm = false
+                                skillToDelete = null
+                            }
+                        ) {
+                            Text("取消")
+                        }
+                    }
+                )
             }
 
             val showButton by remember {
