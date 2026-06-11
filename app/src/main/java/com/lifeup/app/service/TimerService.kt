@@ -74,6 +74,7 @@ class TimerService : Service() {
         private const val PREFS_SKILL_NAME = "skill_name"
         private const val PREFS_START_TIME = "start_time"
         private const val PREFS_IS_RUNNING = "is_running"
+        private const val PREFS_IS_PAUSED = "is_paused"
         private const val PREFS_ELAPSED_SECONDS = "elapsed_seconds"
     }
 
@@ -93,11 +94,12 @@ class TimerService : Service() {
             val skillName = timerPrefs.getString(PREFS_SKILL_NAME, "") ?: ""
             val savedStartTime = timerPrefs.getLong(PREFS_START_TIME, 0L)
             val savedElapsed = timerPrefs.getLong(PREFS_ELAPSED_SECONDS, 0L)
+            val wasPaused = timerPrefs.getBoolean(PREFS_IS_PAUSED, false)
             if (skillId != 0L && savedStartTime > 0L) {
                 _currentSkillId.value = skillId
                 _currentSkillName.value = skillName
                 _isRunning.value = true
-                _isPaused.value = false
+                _isPaused.value = wasPaused
                 accumulatedSeconds = savedElapsed
                 startTimeMs = savedStartTime
                 startForegroundWithNotification()
@@ -121,6 +123,7 @@ class TimerService : Service() {
             putString(PREFS_SKILL_NAME, _currentSkillName.value)
             putLong(PREFS_START_TIME, startTimeMs)
             putBoolean(PREFS_IS_RUNNING, _isRunning.value)
+            putBoolean(PREFS_IS_PAUSED, _isPaused.value)
             putLong(PREFS_ELAPSED_SECONDS, _elapsedSeconds.value)
             apply()
         }

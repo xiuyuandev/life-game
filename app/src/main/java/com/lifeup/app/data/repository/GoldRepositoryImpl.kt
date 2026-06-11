@@ -19,17 +19,15 @@ class GoldRepositoryImpl @Inject constructor(
     private val dailyStateDao: DailyStateDao
 ) : GoldRepository {
 
+    /**
+     * Get total gold earned by aggregating dailyState.goldEarned.
+     * This is the authoritative source of truth for earned gold, since
+     * GameEngine records the actual calculated amount (including first-hit bonus,
+     * level bonus, etc.) into each day's goldEarned.
+     */
     override suspend fun getTotalGoldEarned(): Int {
-        val records = timeRecordDao.getAll()
-        var totalGold = 0
-        for (record in records) {
-            val isInvestment = record.recordType == "INVESTMENT"
-            val baseRate = if (isInvestment) 1 else 0.2
-            totalGold += (record.durationMinutes * baseRate).toInt()
-        }
         val dailyStates = dailyStateDao.getAll()
-        totalGold += dailyStates.size * 50
-        return totalGold
+        return dailyStates.sumOf { it.goldEarned }
     }
 
     override suspend fun getTotalGoldSpent(): Int {
@@ -39,15 +37,19 @@ class GoldRepositoryImpl @Inject constructor(
 
     override fun getGoldBalance(): Flow<Int> {
         return flow {
-            val earned = getTotalGoldEarned()
-            val spent = getTotalGoldSpent()
+            // Single-pass aggregation: get all daily states once
+            val dailyStates = dailyStateDao.getAll()
+            val earned = dailyStates.sumOf { it.goldEarned }
+            val spent = dailyStates.sumOf { it.goldSpent }
             emit((earned - spent).coerceAtLeast(0))
         }
     }
 
     override suspend fun spendGold(amount: Int): Boolean {
         if (amount <= 0) return false
-        val currentBalance = getTotalGoldEarned() - getTotalGoldSpent()
+        // Single-pass aggregation for balance check
+        val dailyStates = dailyStateDao.getAll()
+        val currentBalance = dailyStates.sumOf { it.goldEarned } - dailyStates.sumOf { it.goldSpent }
         if (amount > currentBalance) return false
 
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
@@ -55,13 +57,17 @@ class GoldRepositoryImpl @Inject constructor(
 
         if (todayState != null) {
             dailyStateDao.update(
-                todayState.copy(goldSpent = todayState.goldSpent + amount)
+                todayState.copy(
+                    goldSpent = todayState.goldSpent + amount,
+                    lastUpdated = System.currentTimeMillis()
+                )
             )
         } else {
             dailyStateDao.insert(
                 DailyStateEntity(
                     date = today,
-                    goldSpent = amount
+                    goldSpent = amount,
+                    lastUpdated = System.currentTimeMillis()
                 )
             )
         }

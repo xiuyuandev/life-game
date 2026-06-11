@@ -3,6 +3,7 @@ package com.lifeup.app.data.db.entity
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
@@ -14,7 +15,8 @@ import androidx.room.PrimaryKey
             childColumns = ["skill_id"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index("skill_id")]
 )
 data class ItemEntity(
     @PrimaryKey(autoGenerate = true)
@@ -22,8 +24,8 @@ data class ItemEntity(
 
     val name: String,
 
-    @ColumnInfo(name = "skill_id", index = true)
-    val skillId: Long,
+    @ColumnInfo(name = "skill_id")
+    val skillId: Long? = null,
 
     @ColumnInfo(name = "item_tier")
     val itemTier: String = "COMMON",

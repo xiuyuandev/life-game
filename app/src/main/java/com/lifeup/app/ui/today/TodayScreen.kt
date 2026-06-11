@@ -95,6 +95,8 @@ fun TodayScreen(
     onNavigateToTimer: (Long) -> Unit,
     onNavigateToCreateSkill: () -> Unit,
     onNavigateToRetroactive: () -> Unit = {},
+    onNavigateToCharacter: () -> Unit = {},
+    onNavigateToLedger: () -> Unit = {},
     viewModel: TodayViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -126,7 +128,7 @@ fun TodayScreen(
                             icon = Icons.Default.History,
                             onClick = {
                                 fabExpanded = false
-                                navController.navigate(Screen.Retroactive.route)
+                                onNavigateToRetroactive()
                             }
                         )
                         // Quick timer
@@ -277,8 +279,8 @@ fun TodayScreen(
                         totalExp = uiState.totalExp,
                         expToNextLevel = uiState.expToNextLevel,
                         streakCount = uiState.streakCount,
-                        onNavigateToCharacter = { navController.navigate(Screen.Character.route) },
-                        onNavigateToLedger = { navController.navigate(Screen.Ledger.route) }
+                        onNavigateToCharacter = onNavigateToCharacter,
+                        onNavigateToLedger = onNavigateToLedger
                     )
                 }
 

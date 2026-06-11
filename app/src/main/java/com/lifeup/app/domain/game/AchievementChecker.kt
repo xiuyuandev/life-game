@@ -15,7 +15,7 @@ data class Achievement(
 )
 
 enum class AchievementCategory {
-    SKILL, STREAK, COLLECTION, COMBO
+    SKILL, HABIT, STREAK, COLLECTION, COMBO
 }
 
 object AchievementChecker {

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -313,10 +314,7 @@ class StatsViewModel @Inject constructor(
 
                     // Load previous period data for comparison
                     val prevRecords = try {
-                        val flow = timeRecordRepository.getRecordsByDateRange(prevStartMs, prevEndMs)
-                        var result: List<TimeRecord> = emptyList()
-                        flow.collect { result = it }
-                        result
+                        timeRecordRepository.getRecordsByDateRange(prevStartMs, prevEndMs).first()
                     } catch (e: Exception) {
                         emptyList()
                     }

@@ -3,6 +3,7 @@ package com.lifeup.app.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifeup.app.domain.calculator.AttributeCalculator
+import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TimeRecordRepository
@@ -10,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -21,6 +23,7 @@ data class ProfileUiState(
     val skillCount: Int = 0,
     val maxLevel: Int = 1,
     val characterLevel: Int = 1,
+    val totalExp: Long = 0L,
     val isLoading: Boolean = true
 )
 
@@ -28,7 +31,8 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val skillRepository: SkillRepository,
     private val timeRecordRepository: TimeRecordRepository,
-    private val dailyStateRepository: DailyStateRepository
+    private val dailyStateRepository: DailyStateRepository,
+    private val characterStateRepository: CharacterStateRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -47,7 +51,13 @@ class ProfileViewModel @Inject constructor(
                     val totalTime = skills.sumOf { it.totalMinutes }
                     val skillCount = skills.size
                     val maxLevel = skills.maxOfOrNull { it.level } ?: 1
-                    val totalExp = totalTime * 10L
+
+                    // Use real character EXP from CharacterStateRepository (authoritative source)
+                    val totalExp = try {
+                        characterStateRepository.getCharacterState().first().totalExp
+                    } catch (_: Exception) {
+                        0L
+                    }
                     val characterLevel = AttributeCalculator.calculateCharacterLevel(totalExp).coerceAtLeast(1)
 
                     _uiState.update {
@@ -56,6 +66,7 @@ class ProfileViewModel @Inject constructor(
                             skillCount = skillCount,
                             maxLevel = maxLevel,
                             characterLevel = characterLevel,
+                            totalExp = totalExp,
                             isLoading = false
                         )
                     }

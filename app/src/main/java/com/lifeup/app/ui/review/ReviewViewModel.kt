@@ -135,6 +135,13 @@ class ReviewViewModel @Inject constructor(
             try {
                 val (startMs, endMs) = getDayTimeRange(date)
 
+                // Pre-fetch the latest streak (suspend call) outside the combine block
+                val latestStreak = try {
+                    dailyStateRepository.getLatestStreak()
+                } catch (_: Exception) {
+                    null
+                }
+
                 combine(
                     timeRecordRepository.getRecordsByDateRange(startMs, endMs),
                     skillRepository.getActiveSkills(),
@@ -148,9 +155,7 @@ class ReviewViewModel @Inject constructor(
                     val consumeMins = records
                         .filter { it.recordType == RecordType.CONSUMPTION }
                         .sumOf { it.durationMinutes }
-                    val streak = dailyStateRepository.getLatestStreak()
-                        ?: dailyState?.streakCount
-                        ?: 0
+                    val streak = latestStreak ?: dailyState?.streakCount ?: 0
 
                     _uiState.update { it.copy(
                         timeRecords = records.sortedBy { r -> r.startTime },

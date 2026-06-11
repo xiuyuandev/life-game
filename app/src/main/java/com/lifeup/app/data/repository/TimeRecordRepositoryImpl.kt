@@ -35,6 +35,10 @@ class TimeRecordRepositoryImpl @Inject constructor(
     override suspend fun getInvestmentMinutesByDate(date: String): Int {
         return timeRecordDao.getInvestmentMinutesByDate(date)
     }
+
+    override suspend fun getTotalRecordCount(): Int {
+        return timeRecordDao.getTotalCount()
+    }
 }
 
 fun TimeRecordEntity.toDomain(): TimeRecord {

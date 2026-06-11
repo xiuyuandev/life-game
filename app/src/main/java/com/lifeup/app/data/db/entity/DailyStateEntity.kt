@@ -38,5 +38,8 @@ data class DailyStateEntity(
     val goldEarned: Int = 0,
 
     @ColumnInfo(name = "gold_spent")
-    val goldSpent: Int = 0
+    val goldSpent: Int = 0,
+
+    @ColumnInfo(name = "last_updated", defaultValue = "0")
+    val lastUpdated: Long = 0L
 )

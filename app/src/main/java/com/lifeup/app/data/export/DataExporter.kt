@@ -288,7 +288,11 @@ class DataExporter @Inject constructor(
     private fun ItemEntity.toJson() = JSONObject().apply {
         put("id", id)
         put("name", name)
-        put("skillId", skillId)
+        if (skillId != null) {
+            put("skillId", skillId)
+        } else {
+            put("skillId", JSONObject.NULL)
+        }
         put("itemTier", itemTier)
         put("attributeBonus", attributeBonus)
         put("expBonusContribution", expBonusContribution.toDouble())
@@ -305,7 +309,7 @@ class DataExporter @Inject constructor(
     private fun JSONObject.toItemEntity() = ItemEntity(
         id = optLong("id", 0),
         name = getString("name"),
-        skillId = getLong("skillId"),
+        skillId = if (isNull("skillId")) null else optLong("skillId", 0L),
         itemTier = optString("itemTier", "COMMON"),
         attributeBonus = optInt("attributeBonus", 0),
         expBonusContribution = optDouble("expBonusContribution", 0.0).toFloat(),
@@ -332,6 +336,7 @@ class DataExporter @Inject constructor(
         put("habitsCompleted", habitsCompleted)
         put("goldEarned", goldEarned)
         put("goldSpent", goldSpent)
+        put("lastUpdated", lastUpdated)
     }
 
     private fun JSONObject.toDailyStateEntity() = DailyStateEntity(
@@ -346,7 +351,8 @@ class DataExporter @Inject constructor(
         todosCompleted = optInt("todosCompleted", 0),
         habitsCompleted = optInt("habitsCompleted", 0),
         goldEarned = optInt("goldEarned", 0),
-        goldSpent = optInt("goldSpent", 0)
+        goldSpent = optInt("goldSpent", 0),
+        lastUpdated = optLong("lastUpdated", 0L)
     )
 
     private fun AchievementEntity.toJson() = JSONObject().apply {

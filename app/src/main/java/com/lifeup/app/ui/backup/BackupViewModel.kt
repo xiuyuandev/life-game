@@ -1,5 +1,7 @@
 package com.lifeup.app.ui.backup
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifeup.app.data.export.CsvExporter
@@ -78,6 +80,34 @@ class BackupViewModel @Inject constructor(
         }
     }
 
+    fun exportJsonToUri(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isExporting = true, message = null) }
+            try {
+                val tempFile = dataExporter.exportToJson()
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    tempFile.inputStream().use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                tempFile.delete()
+                val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.getDefault()))
+                settingsPrefs.setLastBackupDate(now)
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        message = "JSON导出成功",
+                        lastBackupDate = now
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isExporting = false, message = "导出失败: ${e.message}")
+                }
+            }
+        }
+    }
+
     fun exportCsv() {
         viewModelScope.launch {
             _uiState.update { it.copy(isExporting = true, message = null) }
@@ -102,6 +132,50 @@ class BackupViewModel @Inject constructor(
             _uiState.update { it.copy(isImporting = true, message = null, importSuccess = null) }
             try {
                 val success = dataExporter.importFromJson(file)
+                if (success) {
+                    val count = dataExporter.getTotalRecordsCount()
+                    _uiState.update {
+                        it.copy(
+                            isImporting = false,
+                            importSuccess = true,
+                            message = "导入成功，共恢复 $count 条记录",
+                            totalRecordsCount = count,
+                            databaseSize = dataExporter.getDatabaseSize()
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            isImporting = false,
+                            importSuccess = false,
+                            message = "导入失败：文件格式不正确"
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isImporting = false,
+                        importSuccess = false,
+                        message = "导入失败: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    fun importJsonFromUri(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isImporting = true, message = null, importSuccess = null) }
+            try {
+                val tempFile = File.createTempFile("lifeup_import_", ".json", context.cacheDir)
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    tempFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                val success = dataExporter.importFromJson(tempFile)
+                tempFile.delete()
                 if (success) {
                     val count = dataExporter.getTotalRecordsCount()
                     _uiState.update {

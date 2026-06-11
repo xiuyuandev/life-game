@@ -4,6 +4,7 @@ import com.lifeup.app.data.db.FocusType
 import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.data.db.SlotType
+import com.lifeup.app.data.preferences.SettingsPrefs
 import com.lifeup.app.domain.calculator.ExpCalculator
 import com.lifeup.app.domain.calculator.GoldCalculator
 import com.lifeup.app.domain.model.Combo
@@ -47,7 +48,10 @@ object GameEngine {
         comboRepository: ComboRepository,
         itemRepository: ItemRepository,
         characterStateRepository: CharacterStateRepository,
-        achievementRepository: AchievementRepository
+        achievementRepository: AchievementRepository,
+        settingsPrefs: SettingsPrefs,
+        customStartTime: Long? = null,
+        customEndTime: Long? = null
     ): TimerResult {
         return try {
             // Input validation
@@ -67,17 +71,32 @@ object GameEngine {
                 dailyStateRepository.getStateByDate(today).first()
             } ?: DailyState(date = today)
 
-            // Calculate energy cost and validate
-            val energyCost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
-            if (dailyState.energy < energyCost) {
-                throw IllegalStateException("能量不足，需要 $energyCost 能量，当前 ${dailyState.energy.toInt()}")
+            // Calculate energy cost and validate (skip for retroactive records to allow backfilling)
+            val energyCost = if (customStartTime == null) {
+                val cost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
+                if (dailyState.energy < cost) {
+                    throw IllegalStateException("能量不足，需要 $cost 能量，当前 ${dailyState.energy.toInt()}")
+                }
+                cost
+            } else {
+                0
             }
 
-            // a. Create a TimeRecord
+            // Use SettingsPrefs as single source of truth for first-timer flag
+            val isFirstTimerToday = withTimeout(5000) {
+                settingsPrefs.isFirstTimerUsedToday().first()
+            }
+
+            // a. Create a TimeRecord (use custom times for retroactive records)
+            val (recordStartTime, recordEndTime) = if (customStartTime != null && customEndTime != null) {
+                customStartTime to customEndTime
+            } else {
+                (now - durationMinutes * 60_000L) to now
+            }
             val record = TimeRecord(
                 skillId = skillId,
-                startTime = now - durationMinutes * 60_000L,
-                endTime = now,
+                startTime = recordStartTime,
+                endTime = recordEndTime,
                 durationMinutes = durationMinutes,
                 recordType = recordType,
                 focusType = focusType
@@ -95,6 +114,10 @@ object GameEngine {
             val leveledUp = leveledSkill.level > skill.level
             skillRepository.updateSkill(leveledSkill)
 
+            // For retroactive records, never apply first-timer bonus
+            // (the first-timer of today should only be granted to a live timer session)
+            val isFirstTimerTodayForCalc = if (customStartTime == null) isFirstTimerToday else false
+
             // d. Calculate exp using ExpCalculator
             val equippedItems = withTimeout(5000) {
                 itemRepository.getEquippedItems().first()
@@ -103,7 +126,6 @@ object GameEngine {
                 comboRepository.getActiveCombos().first()
             }
             val streakDays = dailyState.streakCount
-            val isFirstTimerToday = dailyState.isFirstTimerUsed
             val dailyInvestmentMinutes = dailyState.investmentMinutes
 
             val expGained = ExpCalculator.calculateExp(
@@ -112,7 +134,7 @@ object GameEngine {
                 equippedItems = equippedItems,
                 activeCombos = activeCombos,
                 streakDays = streakDays,
-                isFirstTimerToday = isFirstTimerToday,
+                isFirstTimerToday = isFirstTimerTodayForCalc,
                 dailyInvestmentMinutes = dailyInvestmentMinutes
             )
 
@@ -124,24 +146,34 @@ object GameEngine {
             val goldGained = GoldCalculator.calculateGold(
                 minutes = durationMinutes,
                 isInvestment = recordType == RecordType.INVESTMENT,
-                isFirstTimerToday = isFirstTimerToday,
+                isFirstTimerToday = isFirstTimerTodayForCalc,
                 skillLevel = leveledSkill.level
             )
 
-            // f. Update daily state (investment/consumption minutes + energy)
+            // f. Update daily state (investment/consumption minutes + energy + first-timer flag)
+            // For retroactive records, don't consume energy or mark first-timer as used.
             val updatedDailyState = when (recordType) {
                 RecordType.INVESTMENT -> dailyState.copy(
                     investmentMinutes = dailyState.investmentMinutes + durationMinutes,
                     goldEarned = dailyState.goldEarned + goldGained,
-                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f)
+                    energy = if (customStartTime == null) (dailyState.energy - energyCost).coerceAtLeast(0f) else dailyState.energy,
+                    isFirstTimerUsed = if (customStartTime == null) true else dailyState.isFirstTimerUsed,
+                    lastUpdated = System.currentTimeMillis()
                 )
                 RecordType.CONSUMPTION -> dailyState.copy(
                     consumptionMinutes = dailyState.consumptionMinutes + durationMinutes,
                     goldEarned = dailyState.goldEarned + goldGained,
-                    energy = (dailyState.energy - energyCost).coerceAtLeast(0f)
+                    energy = if (customStartTime == null) (dailyState.energy - energyCost).coerceAtLeast(0f) else dailyState.energy,
+                    isFirstTimerUsed = if (customStartTime == null) true else dailyState.isFirstTimerUsed,
+                    lastUpdated = System.currentTimeMillis()
                 )
             }
             dailyStateRepository.insertOrUpdateState(updatedDailyState)
+
+            // Mark first-timer as used in SettingsPrefs (only for live timers, not retroactive)
+            if (customStartTime == null) {
+                settingsPrefs.setFirstTimerUsedToday(true)
+            }
 
             // g. Check for item unlocks on level up
             val itemsUnlocked = if (leveledUp) {
@@ -151,9 +183,9 @@ object GameEngine {
                 emptyList()
             }
 
-            // g2. Check achievements
+            // g2. Check achievements (use efficient count query)
             val totalRecords = withTimeout(5000) {
-                timeRecordRepository.getRecordsByDateRange(0, Long.MAX_VALUE).first().size
+                timeRecordRepository.getTotalRecordCount()
             }
             if (totalRecords == 1) {
                 achievementRepository.unlockAchievement("first_skill")
@@ -228,10 +260,11 @@ object GameEngine {
                 date = date,
                 investmentMinutes = investmentMinutes,
                 todosCompleted = todosCompleted,
-                streakCount = previousStreak
+                streakCount = previousStreak,
+                lastUpdated = System.currentTimeMillis()
             )
         } catch (e: Exception) {
-            DailyState(date = date)
+            DailyState(date = date, lastUpdated = System.currentTimeMillis())
         }
     }
 

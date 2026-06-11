@@ -18,9 +18,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
 
@@ -66,6 +68,13 @@ class CharacterViewModel @Inject constructor(
             } catch (_: Exception) {
             }
 
+            // Pre-fetch latest streak (suspend call must be outside combine lambda)
+            val maxStreak = try {
+                withTimeout(5000) { dailyStateRepository.getLatestStreak() ?: 0 }
+            } catch (_: Exception) {
+                0
+            }
+
             try {
                 combine(
                     characterStateRepository.getCharacterState(),
@@ -75,7 +84,7 @@ class CharacterViewModel @Inject constructor(
                     settingsPrefs.getOutfitPresets()
                 ) { characterState, skills, equippedItems, unlockedItems, presets ->
                     val attributes = try {
-                        calculateAttributes(skills, equippedItems)
+                        calculateAttributes(skills, equippedItems, maxStreak)
                     } catch (_: Exception) {
                         emptyMap()
                     }
@@ -110,7 +119,8 @@ class CharacterViewModel @Inject constructor(
 
     private fun calculateAttributes(
         skills: List<com.lifeup.app.domain.model.Skill>,
-        equippedItems: List<Item>
+        equippedItems: List<Item>,
+        maxStreak: Int
     ): Map<String, Int> {
         return try {
             val baseMap = BoundAttribute.entries.associate { attr ->
@@ -122,7 +132,7 @@ class CharacterViewModel @Inject constructor(
             val itemBonus = equippedItems.sumOf { it.attributeBonus }
 
             val endurance = AttributeCalculator.calculateEndurance(
-                maxStreak = dailyStateRepository.getLatestStreak() ?: 0,
+                maxStreak = maxStreak,
                 activeSkillCount = skills.size
             )
 

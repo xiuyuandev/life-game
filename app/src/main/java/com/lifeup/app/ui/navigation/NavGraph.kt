@@ -74,6 +74,12 @@ fun LifeUpNavGraph(
                 },
                 onNavigateToRetroactive = {
                     navController.navigate(Screen.Retroactive.route)
+                },
+                onNavigateToCharacter = {
+                    navController.navigate(Screen.Character.route)
+                },
+                onNavigateToLedger = {
+                    navController.navigate(Screen.Ledger.route)
                 }
             )
         }

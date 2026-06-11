@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifeup.app.data.db.Priority
 import com.lifeup.app.data.db.SkillStatus
+import com.lifeup.app.domain.model.DailyState
 import com.lifeup.app.domain.model.Skill
 import com.lifeup.app.domain.model.Todo
+import com.lifeup.app.domain.repository.AchievementRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TodoRepository
@@ -15,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -40,6 +43,7 @@ class OnboardingViewModel @Inject constructor(
     private val skillRepository: SkillRepository,
     private val todoRepository: TodoRepository,
     private val dailyStateRepository: DailyStateRepository,
+    private val achievementRepository: AchievementRepository,
     private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
@@ -81,6 +85,19 @@ class OnboardingViewModel @Inject constructor(
                 )
 
                 val skillId = skillRepository.insertSkill(skill)
+
+                // Initialize today's daily state if it doesn't exist
+                val todayStr = LocalDate.now().format(dateFormat)
+                val existingState = dailyStateRepository.getStateByDate(todayStr).firstOrNull()
+                if (existingState == null) {
+                    dailyStateRepository.insertOrUpdateState(
+                        DailyState(date = todayStr, lastUpdated = System.currentTimeMillis())
+                    )
+                }
+
+                // Unlock first_skill achievement
+                achievementRepository.unlockAchievement("first_skill")
+
                 _uiState.update {
                     it.copy(
                         isCreating = false,
@@ -114,6 +131,21 @@ class OnboardingViewModel @Inject constructor(
                 )
 
                 todoRepository.insertTodo(habit)
+
+                // Update daily state's habitsCompleted counter and reward gold
+                val currentState = dailyStateRepository.getStateByDate(todayStr).firstOrNull()
+                if (currentState != null) {
+                    dailyStateRepository.insertOrUpdateState(
+                        currentState.copy(
+                            habitsCompleted = currentState.habitsCompleted + 1,
+                            goldEarned = currentState.goldEarned + 5,
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                    )
+                }
+
+                // Unlock first_habit achievement
+                achievementRepository.unlockAchievement("first_habit")
 
                 _uiState.update {
                     it.copy(

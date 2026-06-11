@@ -345,8 +345,8 @@ private fun CharacterHeader(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Exp progress bar
-                val nextLevelExp = ((characterLevel + 1) * (characterLevel + 1) * 1000L)
-                val currentLevelExp = (characterLevel * characterLevel * 1000L)
+                val nextLevelExp = com.lifeup.app.domain.calculator.AttributeCalculator.getLevelThreshold(characterLevel + 1)
+                val currentLevelExp = com.lifeup.app.domain.calculator.AttributeCalculator.getLevelThreshold(characterLevel)
                 val progress = if (nextLevelExp > currentLevelExp) {
                     ((totalExp - currentLevelExp).toFloat() / (nextLevelExp - currentLevelExp)).coerceIn(0f, 1f)
                 } else 0f

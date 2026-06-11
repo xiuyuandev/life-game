@@ -35,6 +35,9 @@ interface TimeRecordDao {
     @Query("SELECT * FROM time_records")
     suspend fun getAll(): List<TimeRecordEntity>
 
+    @Query("SELECT COUNT(*) FROM time_records")
+    suspend fun getTotalCount(): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<TimeRecordEntity>)
 

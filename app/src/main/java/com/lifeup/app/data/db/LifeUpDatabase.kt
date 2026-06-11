@@ -33,7 +33,7 @@ import com.lifeup.app.data.db.entity.TodoEntity
         CharacterStateEntity::class,
         AchievementEntity::class
     ],
-    version = 6,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -154,6 +154,58 @@ abstract class LifeUpDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add last_updated column to daily_states for energy regeneration tracking
+                val cursor = db.query("PRAGMA table_info(daily_states)")
+                val columnNames = mutableListOf<String>()
+                while (cursor.moveToNext()) {
+                    columnNames.add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+                }
+                cursor.close()
+
+                if (!columnNames.contains("last_updated")) {
+                    db.execSQL("ALTER TABLE daily_states ADD COLUMN last_updated INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Rebuild items table to make skill_id nullable (for shop items that aren't bound to a skill)
+                // SQLite doesn't support ALTER COLUMN, so we need to:
+                // 1. Create a new table with nullable skill_id
+                // 2. Copy data from old table
+                // 3. Drop old table
+                // 4. Rename new table
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS items_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        skill_id INTEGER,
+                        item_tier TEXT NOT NULL,
+                        attribute_bonus INTEGER NOT NULL,
+                        exp_bonus_contribution REAL NOT NULL,
+                        description TEXT,
+                        slot_type TEXT NOT NULL,
+                        is_equipped INTEGER NOT NULL,
+                        equipped_slot TEXT,
+                        is_unlocked INTEGER NOT NULL,
+                        price INTEGER NOT NULL,
+                        custom_icon_key TEXT,
+                        created_at INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO items_new (id, name, skill_id, item_tier, attribute_bonus, exp_bonus_contribution, description, slot_type, is_equipped, equipped_slot, is_unlocked, price, custom_icon_key, created_at)
+                    SELECT id, name, skill_id, item_tier, attribute_bonus, exp_bonus_contribution, description, slot_type, is_equipped, equipped_slot, is_unlocked, price, custom_icon_key, created_at FROM items
+                """.trimIndent())
+                db.execSQL("DROP TABLE items")
+                db.execSQL("ALTER TABLE items_new RENAME TO items")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_items_skill_id ON items(skill_id)")
+            }
+        }
+
         fun getDatabase(context: Context): LifeUpDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -161,7 +213,7 @@ abstract class LifeUpDatabase : RoomDatabase() {
                     LifeUpDatabase::class.java,
                     "lifeup_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                     .build()
                 INSTANCE = instance
                 instance

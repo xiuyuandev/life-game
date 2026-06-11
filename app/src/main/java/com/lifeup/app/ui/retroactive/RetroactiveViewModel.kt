@@ -52,7 +52,8 @@ class RetroactiveViewModel @Inject constructor(
     private val comboRepository: ComboRepository,
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
-    private val achievementRepository: AchievementRepository
+    private val achievementRepository: AchievementRepository,
+    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RetroactiveUiState())
@@ -143,25 +144,15 @@ class RetroactiveViewModel @Inject constructor(
             _uiState.update { it.copy(isSaving = true) }
 
             try {
-                // Compute startTime from date + hour + minute
-                val startTime = LocalDateTime.of(
+                // Compute startTime from date + hour + minute for retroactive records
+                val customStartTime = LocalDateTime.of(
                     selected,
                     java.time.LocalTime.of(state.startHour, state.startMinute)
                 ).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val endTime = startTime + state.durationMinutes * 60_000L
+                val customEndTime = customStartTime + state.durationMinutes * 60_000L
 
-                // Create TimeRecord with retroactive timestamps
-                val record = TimeRecord(
-                    skillId = skillId,
-                    startTime = startTime,
-                    endTime = endTime,
-                    durationMinutes = state.durationMinutes,
-                    recordType = state.recordType,
-                    focusType = FocusType.FOCUSED
-                )
-                timeRecordRepository.insertRecord(record)
-
-                // Process timer result: updates skill totalMinutes, level up, exp/gold, daily state, item unlocks
+                // Process timer result: GameEngine creates TimeRecord + updates skill totalMinutes,
+                // level up, exp/gold, daily state, item unlocks (all in one transaction)
                 GameEngine.processTimerResult(
                     skillId = skillId,
                     durationMinutes = state.durationMinutes,
@@ -173,7 +164,10 @@ class RetroactiveViewModel @Inject constructor(
                     comboRepository = comboRepository,
                     itemRepository = itemRepository,
                     characterStateRepository = characterStateRepository,
-                    achievementRepository = achievementRepository
+                    achievementRepository = achievementRepository,
+                    settingsPrefs = settingsPrefs,
+                    customStartTime = customStartTime,
+                    customEndTime = customEndTime
                 )
 
                 _uiState.update { it.copy(isSaving = false, isSaved = true) }

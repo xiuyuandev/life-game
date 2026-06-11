@@ -14,4 +14,6 @@ interface TimeRecordRepository {
     suspend fun updateRecord(record: TimeRecord)
 
     suspend fun getInvestmentMinutesByDate(date: String): Int
+
+    suspend fun getTotalRecordCount(): Int
 }

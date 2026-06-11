@@ -53,6 +53,7 @@ class TimerViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
+    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs,
     private val application: Application
 ) : ViewModel() {
 
@@ -112,8 +113,20 @@ class TimerViewModel @Inject constructor(
                 }
                 val durationMinutes = 25 // default focus session length
                 val energyCost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
-                if ((dailyState?.energy ?: 0f) < energyCost) {
-                    _uiState.update { it.copy(error = "能量不足，需要 $energyCost 能量") }
+
+                // Calculate regenerated energy based on time since last update (5 per hour)
+                val regeneratedEnergy = if (dailyState != null) {
+                    val hoursSinceUpdate = (System.currentTimeMillis() - dailyState.lastUpdated) / 3_600_000f
+                    (hoursSinceUpdate * 5f).toInt()
+                } else {
+                    0
+                }
+                val effectiveEnergy = (dailyState?.energy ?: 0f) + regeneratedEnergy
+                val energyCap = dailyState?.energyCap ?: 100f
+                val availableEnergy = effectiveEnergy.coerceAtMost(energyCap)
+
+                if (availableEnergy < energyCost) {
+                    _uiState.update { it.copy(error = "能量不足，需要 $energyCost 能量，当前可用 ${availableEnergy.toInt()}") }
                     return@launch
                 }
                 timerManager.startTimer(application, skill.id, skill.name)
@@ -142,7 +155,8 @@ class TimerViewModel @Inject constructor(
                     comboRepository = comboRepository,
                     itemRepository = itemRepository,
                     characterStateRepository = characterStateRepository,
-                    achievementRepository = achievementRepository
+                    achievementRepository = achievementRepository,
+                    settingsPrefs = settingsPrefs
                 )
                 _uiState.update {
                     it.copy(

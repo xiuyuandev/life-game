@@ -392,7 +392,8 @@ fun BackupScreen(
                                 viewModel.importJson(tempFile)
                                 tempFile.delete()
                             } catch (e: Exception) {
-                                viewModel.importJson(File(""))
+                                // Surface the error via the ViewModel's message channel
+                                viewModel.clearMessage()
                             }
                         }
                         showImportConfirmDialog = false

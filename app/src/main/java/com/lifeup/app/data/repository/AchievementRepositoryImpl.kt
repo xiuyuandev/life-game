@@ -50,6 +50,9 @@ class AchievementRepositoryImpl @Inject constructor(
             AchievementEntity("skill_level_10", "登峰造极", "任意技能达到10级", "SKILL", target = 1),
             AchievementEntity("five_skills", "多才多艺", "同时拥有5个技能", "SKILL", target = 5),
             AchievementEntity("master_skill", "大师之路", "一个技能达到大师级（LV5+3星）", "SKILL", target = 1),
+            // Habit achievements
+            AchievementEntity("first_habit", "养成开始", "完成第一个习惯打卡", "HABIT", target = 1),
+            AchievementEntity("week_habit", "习惯养成", "连续7天完成习惯", "HABIT", target = 7),
             // Streak achievements
             AchievementEntity("first_streak", "坚持不懈", "连续打卡3天", "STREAK", target = 3),
             AchievementEntity("week_streak", "一周战士", "连续打卡7天", "STREAK", target = 7),

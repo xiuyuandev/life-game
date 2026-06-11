@@ -178,7 +178,7 @@ class ShopViewModel @Inject constructor(
 
                 val item = Item(
                     name = template.name,
-                    skillId = 0L,
+                    skillId = null,  // Shop items are not bound to a specific skill
                     itemTier = template.itemTier,
                     attributeBonus = template.attributeBonus,
                     expBonusContribution = template.expBonusContribution,

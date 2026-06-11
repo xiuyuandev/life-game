@@ -53,7 +53,8 @@ object DailyReset {
                 streakCount = streakCount,
                 isFirstTimerUsed = false,
                 todosCompleted = 0,
-                habitsCompleted = 0
+                habitsCompleted = 0,
+                lastUpdated = System.currentTimeMillis()
             )
             dailyStateRepository.insertOrUpdateState(newDailyState)
         }

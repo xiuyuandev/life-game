@@ -162,6 +162,13 @@ class TodayViewModel @Inject constructor(
                     nextThreshold - it.totalExp
                 } ?: 1000L
 
+                // Pre-fetch streak (suspend call must be outside collect lambda)
+                val latestStreak = try {
+                    withTimeout(5000) { dailyStateRepository.getLatestStreak() }
+                } catch (_: Exception) {
+                    null
+                }
+
                 combine(
                     todoRepository.getHabitsByDate(todayStr),
                     todoRepository.getTodosByDate(todayStr),
@@ -175,7 +182,7 @@ class TodayViewModel @Inject constructor(
                     )
                     Triple(habits, todos, state)
                 }.collect { (habits, todos, dailyState) ->
-                    val streak = dailyStateRepository.getLatestStreak() ?: dailyState.streakCount
+                    val streak = latestStreak ?: dailyState.streakCount
                     val habitsCompleted = habits.count { it.isCompleted }
                     val todosCompleted = todos.count { it.isCompleted }
 

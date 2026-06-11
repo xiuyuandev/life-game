@@ -100,6 +100,7 @@ fun AchievementScreen(
         // Sections by category
         val categoryLabels = mapOf(
             AchievementCategory.SKILL to "⚔️ 技能成就",
+            AchievementCategory.HABIT to "🌱 习惯成就",
             AchievementCategory.STREAK to "🔥 连续打卡",
             AchievementCategory.COLLECTION to "⭐ 收藏成就",
             AchievementCategory.COMBO to "🔗 组合成就"

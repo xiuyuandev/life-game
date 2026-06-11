@@ -40,7 +40,8 @@ fun DailyStateEntity.toDomain(): DailyState {
         todosCompleted = todosCompleted,
         habitsCompleted = habitsCompleted,
         goldEarned = goldEarned,
-        goldSpent = goldSpent
+        goldSpent = goldSpent,
+        lastUpdated = lastUpdated
     )
 }
 
@@ -57,6 +58,7 @@ fun DailyState.toEntity(): DailyStateEntity {
         todosCompleted = todosCompleted,
         habitsCompleted = habitsCompleted,
         goldEarned = goldEarned,
-        goldSpent = goldSpent
+        goldSpent = goldSpent,
+        lastUpdated = lastUpdated
     )
 }
