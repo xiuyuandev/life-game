@@ -449,7 +449,7 @@ private fun SectionHeader(
         TextButton(onClick = onAddClick) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = null,
+                contentDescription = "添加",
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(2.dp))
@@ -499,7 +499,7 @@ private fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = Icons.Default.History,
-                contentDescription = null,
+                contentDescription = "补录时间",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -516,7 +516,7 @@ private fun QuickActionsRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Timer,
-                contentDescription = null,
+                contentDescription = "开始计时",
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))

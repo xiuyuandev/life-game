@@ -16,8 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import kotlinx.coroutines.withTimeout
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -105,7 +106,7 @@ class CreateSkillViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateSkillUiState())
     val uiState: StateFlow<CreateSkillUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     init {
         loadEnergy()
@@ -114,7 +115,7 @@ class CreateSkillViewModel @Inject constructor(
     private fun loadEnergy() {
         viewModelScope.launch {
             try {
-                val todayStr = dateFormat.format(Date())
+                val todayStr = LocalDate.now().format(dateFormat)
                 dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
                     val state = dailyState ?: return@collect
                     _uiState.update {
@@ -231,8 +232,10 @@ class CreateSkillViewModel @Inject constructor(
                 skillRepository.insertSkill(skill)
 
                 // Deduct energy
-                val todayStr = dateFormat.format(Date())
-                val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
+                val todayStr = LocalDate.now().format(dateFormat)
+                val dailyState = try {
+                    withTimeout(5000) { dailyStateRepository.getStateByDate(todayStr).first() }
+                } catch (_: Exception) { null }
                 if (dailyState != null) {
                     dailyStateRepository.insertOrUpdateState(
                         dailyState.copy(energy = dailyState.energy - 2f)

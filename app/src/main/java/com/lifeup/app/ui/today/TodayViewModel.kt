@@ -19,8 +19,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
-import java.text.SimpleDateFormat
-import java.util.Date
+import kotlinx.coroutines.withTimeout
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -51,8 +52,8 @@ class TodayViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(TodayUiState())
     val uiState: StateFlow<TodayUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val displayDateFormat = SimpleDateFormat("M月d日 EEEE", Locale.CHINESE)
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
+    private val displayDateFormat = DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.CHINESE)
 
     private var loadJob: Job? = null
 
@@ -72,7 +73,7 @@ class TodayViewModel @Inject constructor(
 
                 val daysSinceStart = ((System.currentTimeMillis() - earliestCreatedAt) / (24 * 60 * 60 * 1000)).toInt() + 1
                 val dismissedTips = try {
-                    settingsPrefs.getDismissedTips().first()
+                    withTimeout(5000) { settingsPrefs.getDismissedTips().first() }
                 } catch (_: Exception) {
                     emptySet()
                 }
@@ -120,8 +121,9 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun loadTodayData(isRefresh: Boolean = false) {
-        val todayStr = dateFormat.format(Date())
-        val displayDate = displayDateFormat.format(Date())
+        val today = LocalDate.now()
+        val todayStr = today.format(dateFormat)
+        val displayDate = today.format(displayDateFormat)
 
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
@@ -218,9 +220,9 @@ class TodayViewModel @Inject constructor(
 
                 // Apply energy cost and gold reward on completion
                 if (!item.isCompleted) {
-                    val todayStr = dateFormat.format(Date())
+                    val todayStr = LocalDate.now().format(dateFormat)
                     val dailyState = try {
-                        dailyStateRepository.getStateByDate(todayStr).first()
+                        withTimeout(5000) { dailyStateRepository.getStateByDate(todayStr).first() }
                     } catch (_: Exception) {
                         null
                     }
@@ -253,7 +255,7 @@ class TodayViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val todayStr = dateFormat.format(Date())
+                val todayStr = LocalDate.now().format(dateFormat)
                 val todo = Todo(
                     title = title.trim(),
                     isHabit = isHabit,
@@ -288,9 +290,9 @@ class TodayViewModel @Inject constructor(
     fun updateEnergy() {
         viewModelScope.launch {
             try {
-                val todayStr = dateFormat.format(Date())
+                val todayStr = LocalDate.now().format(dateFormat)
                 val dailyState = try {
-                    dailyStateRepository.getStateByDate(todayStr).first()
+                    withTimeout(5000) { dailyStateRepository.getStateByDate(todayStr).first() }
                 } catch (_: Exception) {
                     null
                 }

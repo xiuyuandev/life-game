@@ -80,7 +80,9 @@ import com.lifeup.app.ui.theme.CategoryLivelihood
 import com.lifeup.app.ui.theme.CategoryMental
 import com.lifeup.app.ui.theme.CategoryPhysical
 import com.lifeup.app.ui.theme.CategorySocial
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val SkillCategory.color: Color
@@ -851,9 +853,9 @@ private fun TimeRecordsSection(timeRecords: List<TimeRecord>) {
 
 @Composable
 private fun TimeRecordItem(record: TimeRecord) {
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    val startTime = timeFormat.format(record.startTime)
-    val endTime = timeFormat.format(record.endTime)
+    val timeFormat = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+    val startTime = Instant.ofEpochMilli(record.startTime).atZone(ZoneId.systemDefault()).format(timeFormat)
+    val endTime = Instant.ofEpochMilli(record.endTime).atZone(ZoneId.systemDefault()).format(timeFormat)
 
     Row(
         modifier = Modifier
@@ -911,8 +913,8 @@ private fun TimeRecordItem(record: TimeRecord) {
 }
 
 private fun groupRecordsByDate(records: List<TimeRecord>): Map<String, List<TimeRecord>> {
-    val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
+    val dateFormat = DateTimeFormatter.ofPattern("yyyy年MM月dd日", Locale.getDefault())
     return records
         .sortedByDescending { it.startTime }
-        .groupBy { dateFormat.format(it.startTime) }
+        .groupBy { Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).format(dateFormat) }
 }

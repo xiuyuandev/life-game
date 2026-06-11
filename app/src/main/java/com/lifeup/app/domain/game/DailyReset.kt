@@ -6,6 +6,7 @@ import com.lifeup.app.domain.model.Todo
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.TodoRepository
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -23,7 +24,9 @@ object DailyReset {
 
         // a. Reset energy to 0 for new day - create new DailyState with fresh energy
         // b. Reset habits (uncheck all habits for the new day)
-        val yesterdayHabits = todoRepository.getHabitsByDate(yesterday).first()
+        val yesterdayHabits = try {
+            withTimeout(5000) { todoRepository.getHabitsByDate(yesterday).first() }
+        } catch (_: Exception) { emptyList() }
         for (habit in yesterdayHabits) {
             val resetHabit = habit.copy(
                 isCompleted = false,
@@ -34,7 +37,9 @@ object DailyReset {
         }
 
         // c. Create new DailyState for today
-        val existingToday = dailyStateRepository.getStateByDate(today).first()
+        val existingToday = try {
+            withTimeout(5000) { dailyStateRepository.getStateByDate(today).first() }
+        } catch (_: Exception) { null }
         if (existingToday == null) {
             // d. Calculate streak (check if yesterday had completions)
             val streakCount = calculateStreak(dailyStateRepository, yesterday)
@@ -61,7 +66,9 @@ object DailyReset {
         dailyStateRepository: DailyStateRepository,
         yesterdayDate: String
     ): Int {
-        val yesterdayState = dailyStateRepository.getStateByDate(yesterdayDate).first()
+        val yesterdayState = try {
+            withTimeout(5000) { dailyStateRepository.getStateByDate(yesterdayDate).first() }
+        } catch (_: Exception) { null }
 
         if (yesterdayState != null && yesterdayState.investmentMinutes > 0) {
             return yesterdayState.streakCount + 1

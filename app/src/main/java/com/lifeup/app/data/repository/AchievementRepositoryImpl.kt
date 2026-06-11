@@ -8,6 +8,7 @@ import com.lifeup.app.domain.repository.AchievementRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,7 +38,9 @@ class AchievementRepositoryImpl @Inject constructor(
     }
 
     override suspend fun initializeAchievements() {
-        val existing = achievementDao.getAll().first()
+        val existing = try {
+            withTimeout(5000) { achievementDao.getAll().first() }
+        } catch (_: Exception) { return }
         if (existing.isNotEmpty()) return
 
         val defaultAchievements = listOf(

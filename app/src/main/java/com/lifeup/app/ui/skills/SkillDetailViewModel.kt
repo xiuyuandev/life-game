@@ -14,8 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -91,24 +93,17 @@ class SkillDetailViewModel @Inject constructor(
     }
 
     private fun calculateWeeklyFrequency(records: List<TimeRecord>): List<DailyFrequency> {
-        val dateFormat = SimpleDateFormat("MM/dd", Locale.getDefault())
-        val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
-        val now = Calendar.getInstance()
+        val dateFormat = DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
+        val dayFormat = DateTimeFormatter.ofPattern("yyyyMMdd", Locale.getDefault())
+        val now = Instant.now().atZone(ZoneId.systemDefault()).truncatedTo(ChronoUnit.DAYS)
 
         // Build last 7 days map
         val dayMap = mutableMapOf<String, DailyFrequency>()
         for (i in 6 downTo 0) {
-            val day = Calendar.getInstance().apply {
-                timeInMillis = now.timeInMillis
-                add(Calendar.DAY_OF_YEAR, -i)
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val key = dayFormat.format(day.time)
+            val day = now.minusDays(i.toLong())
+            val key = day.format(dayFormat)
             dayMap[key] = DailyFrequency(
-                date = dateFormat.format(day.time),
+                date = day.format(dateFormat),
                 count = 0,
                 totalMinutes = 0
             )
@@ -116,12 +111,8 @@ class SkillDetailViewModel @Inject constructor(
 
         // Count records per day
         for (record in records) {
-            val cal = Calendar.getInstance().apply { timeInMillis = record.startTime }
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            val key = dayFormat.format(cal.time)
+            val day = Instant.ofEpochMilli(record.startTime).atZone(ZoneId.systemDefault()).truncatedTo(ChronoUnit.DAYS)
+            val key = day.format(dayFormat)
             dayMap[key]?.let { existing ->
                 dayMap[key] = existing.copy(
                     count = existing.count + 1,
@@ -136,13 +127,13 @@ class SkillDetailViewModel @Inject constructor(
     private fun calculateGrowthCurve(records: List<TimeRecord>): List<GrowthPoint> {
         if (records.isEmpty()) return emptyList()
 
-        val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
+        val monthFormat = DateTimeFormatter.ofPattern("yyyy-MM", Locale.getDefault())
         val sorted = records.sortedBy { it.startTime }
 
         // Group by month and accumulate
         val monthlyMinutes = mutableMapOf<String, Long>()
         for (record in sorted) {
-            val month = monthFormat.format(record.startTime)
+            val month = Instant.ofEpochMilli(record.startTime).atZone(ZoneId.systemDefault()).format(monthFormat)
             monthlyMinutes[month] = (monthlyMinutes[month] ?: 0L) + record.durationMinutes
         }
 

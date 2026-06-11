@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -46,7 +46,7 @@ class OnboardingViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(OnboardingUiState())
     val uiState: StateFlow<OnboardingUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     fun nextStep() {
         val current = _uiState.value.currentStep
@@ -100,7 +100,7 @@ class OnboardingViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                val todayStr = dateFormat.format(Date())
+                val todayStr = LocalDate.now().format(dateFormat)
 
                 // Create and complete the "喝杯水" habit
                 val habit = Todo(

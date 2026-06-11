@@ -153,6 +153,7 @@ fun SkillCard(
                 .fillMaxWidth()
                 .clickable(
                     onClick = onClick,
+                    onClickLabel = "查看技能详情",
                     indication = rememberRipple(
                         color = categoryColor.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(16.dp)

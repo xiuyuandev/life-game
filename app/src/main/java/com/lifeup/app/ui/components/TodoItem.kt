@@ -113,7 +113,10 @@ fun TodoItem(
             modifier = Modifier
                 .size(28.dp)
                 .clip(CircleShape)
-                .clickable(onClick = onToggle),
+                .clickable(
+                    onClick = onToggle,
+                    onClickLabel = if (todo.isCompleted) "标记未完成" else "标记完成"
+                ),
             contentAlignment = Alignment.Center
         ) {
             // Circle outline / filled

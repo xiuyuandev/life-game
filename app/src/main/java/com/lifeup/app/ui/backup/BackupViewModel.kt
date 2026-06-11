@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -61,7 +61,7 @@ class BackupViewModel @Inject constructor(
             _uiState.update { it.copy(isExporting = true, message = null) }
             try {
                 val file = dataExporter.exportToJson()
-                val now = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.getDefault()))
                 settingsPrefs.setLastBackupDate(now)
                 _uiState.update {
                     it.copy(

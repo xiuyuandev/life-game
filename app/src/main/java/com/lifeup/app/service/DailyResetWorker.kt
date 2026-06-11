@@ -19,12 +19,13 @@ class DailyResetWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val dailyStateRepository: DailyStateRepository,
-    private val todoRepository: TodoRepository
+    private val todoRepository: TodoRepository,
+    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         return try {
-            DailyReset.performReset(dailyStateRepository, todoRepository)
+            DailyReset.performReset(dailyStateRepository, todoRepository, settingsPrefs)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
@@ -35,9 +36,15 @@ class DailyResetWorker @AssistedInject constructor(
         private const val WORK_NAME = "daily_reset_work"
 
         fun schedule(context: Context) {
+            val now = java.time.LocalDateTime.now()
+            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
+            val initialDelay = java.time.Duration.between(now, nextMidnight).toMinutes()
+
             val workRequest = PeriodicWorkRequestBuilder<DailyResetWorker>(
                 24, TimeUnit.HOURS
-            ).build()
+            )
+                .setInitialDelay(initialDelay.coerceAtLeast(0), TimeUnit.MINUTES)
+                .build()
 
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(

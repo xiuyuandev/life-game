@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
 
@@ -103,9 +104,9 @@ class TimerViewModel @Inject constructor(
         val skill = _uiState.value.skill ?: return
         viewModelScope.launch {
             try {
-                val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+                val todayStr = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_DATE)
                 val dailyState = try {
-                    dailyStateRepository.getStateByDate(todayStr).first()
+                    withTimeout(5000) { dailyStateRepository.getStateByDate(todayStr).first() }
                 } catch (_: Exception) {
                     null
                 }

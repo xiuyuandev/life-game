@@ -47,8 +47,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.domain.model.Achievement
 import com.lifeup.app.domain.model.AchievementCategory
 import com.lifeup.app.ui.components.ConfettiAnimation
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.launch
 
@@ -249,9 +250,9 @@ private fun AchievementCard(
                 )
                 if (achievement.isUnlocked && achievement.unlockedAt != null) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+                    val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.getDefault())
                     Text(
-                        text = dateFormat.format(Date(achievement.unlockedAt)),
+                        text = Instant.ofEpochMilli(achievement.unlockedAt).atZone(ZoneId.systemDefault()).format(dateFormat),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                     )

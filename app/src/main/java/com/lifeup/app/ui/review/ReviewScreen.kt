@@ -57,8 +57,9 @@ import com.lifeup.app.ui.theme.CategoryLivelihood
 import com.lifeup.app.ui.theme.CategoryMental
 import com.lifeup.app.ui.theme.CategoryPhysical
 import com.lifeup.app.ui.theme.CategorySocial
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Locale
 
 private val SkillCategory.color: Color
@@ -197,7 +198,7 @@ private fun DateSelector(
     onDateSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    val dateFormat = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()) }
 
     Row(
         modifier = Modifier
@@ -215,22 +216,20 @@ private fun DateSelector(
         }
 
         TextButton(onClick = {
-            val cal = Calendar.getInstance()
-            try {
-                cal.time = dateFormat.parse(selectedDate)!!
-            } catch (e: Exception) {
-                // use today
+            val date = try {
+                LocalDate.parse(selectedDate, dateFormat)
+            } catch (e: DateTimeParseException) {
+                LocalDate.now()
             }
             DatePickerDialog(
                 context,
                 { _, year, month, dayOfMonth ->
-                    val pickedCal = Calendar.getInstance()
-                    pickedCal.set(year, month, dayOfMonth)
-                    onDateSelected(dateFormat.format(pickedCal.time))
+                    val picked = LocalDate.of(year, month + 1, dayOfMonth)
+                    onDateSelected(picked.format(dateFormat))
                 },
-                cal.get(Calendar.YEAR),
-                cal.get(Calendar.MONTH),
-                cal.get(Calendar.DAY_OF_MONTH)
+                date.year,
+                date.monthValue - 1,
+                date.dayOfMonth
             ).show()
         }) {
             Text(

@@ -7,6 +7,8 @@ import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.domain.game.GameEngine
 import com.lifeup.app.domain.model.Skill
 import com.lifeup.app.domain.model.TimeRecord
+import com.lifeup.app.domain.repository.AchievementRepository
+import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.ItemRepository
@@ -18,8 +20,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -46,13 +50,15 @@ class RetroactiveViewModel @Inject constructor(
     private val timeRecordRepository: TimeRecordRepository,
     private val dailyStateRepository: DailyStateRepository,
     private val comboRepository: ComboRepository,
-    private val itemRepository: ItemRepository
+    private val itemRepository: ItemRepository,
+    private val characterStateRepository: CharacterStateRepository,
+    private val achievementRepository: AchievementRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RetroactiveUiState())
     val uiState: StateFlow<RetroactiveUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     init {
         loadSkills()
@@ -62,7 +68,7 @@ class RetroactiveViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             skillRepository.getActiveSkills().collect { skills ->
-                val todayStr = dateFormat.format(Calendar.getInstance().time)
+                val todayStr = LocalDate.now().format(dateFormat)
                 _uiState.update {
                     it.copy(
                         skills = skills,
@@ -80,20 +86,11 @@ class RetroactiveViewModel @Inject constructor(
     }
 
     fun selectDate(date: String) {
-        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val today = LocalDate.now()
         val selected = try {
-            val parts = date.split("-")
-            Calendar.getInstance().apply {
-                set(Calendar.YEAR, parts[0].toInt())
-                set(Calendar.MONTH, parts[1].toInt() - 1)
-                set(Calendar.DAY_OF_MONTH, parts[2].toInt())
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
+            LocalDate.parse(date, dateFormat)
         } catch (_: Exception) { null }
-        val error = if (selected != null && selected.after(today)) "不能选择未来日期" else null
+        val error = if (selected != null && selected.isAfter(today)) "不能选择未来日期" else null
         _uiState.update { it.copy(selectedDate = date, dateValidationError = error) }
     }
 
@@ -127,20 +124,11 @@ class RetroactiveViewModel @Inject constructor(
         val skillId = state.selectedSkillId ?: return
         if (state.selectedDate.isBlank()) return
 
-        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val today = LocalDate.now()
         val selected = try {
-            val parts = state.selectedDate.split("-")
-            Calendar.getInstance().apply {
-                set(Calendar.YEAR, parts[0].toInt())
-                set(Calendar.MONTH, parts[1].toInt() - 1)
-                set(Calendar.DAY_OF_MONTH, parts[2].toInt())
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
+            LocalDate.parse(state.selectedDate, dateFormat)
         } catch (_: Exception) { null }
-        val dateError = if (selected != null && selected.after(today)) "不能选择未来日期" else null
+        val dateError = if (selected != null && selected.isAfter(today)) "不能选择未来日期" else null
         val durationError = when {
             state.durationMinutes < 1 -> "时长至少1分钟"
             state.durationMinutes > 480 -> "时长最多480分钟（8小时）"
@@ -156,17 +144,10 @@ class RetroactiveViewModel @Inject constructor(
 
             try {
                 // Compute startTime from date + hour + minute
-                val calendar = Calendar.getInstance().apply {
-                    val dateParts = state.selectedDate.split("-")
-                    set(Calendar.YEAR, dateParts[0].toInt())
-                    set(Calendar.MONTH, dateParts[1].toInt() - 1)
-                    set(Calendar.DAY_OF_MONTH, dateParts[2].toInt())
-                    set(Calendar.HOUR_OF_DAY, state.startHour)
-                    set(Calendar.MINUTE, state.startMinute)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                val startTime = calendar.timeInMillis
+                val startTime = LocalDateTime.of(
+                    selected,
+                    java.time.LocalTime.of(state.startHour, state.startMinute)
+                ).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endTime = startTime + state.durationMinutes * 60_000L
 
                 // Create TimeRecord with retroactive timestamps
@@ -190,7 +171,9 @@ class RetroactiveViewModel @Inject constructor(
                     timeRecordRepository = timeRecordRepository,
                     dailyStateRepository = dailyStateRepository,
                     comboRepository = comboRepository,
-                    itemRepository = itemRepository
+                    itemRepository = itemRepository,
+                    characterStateRepository = characterStateRepository,
+                    achievementRepository = achievementRepository
                 )
 
                 _uiState.update { it.copy(isSaving = false, isSaved = true) }

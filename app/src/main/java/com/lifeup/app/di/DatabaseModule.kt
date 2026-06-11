@@ -31,6 +31,7 @@ object DatabaseModule {
         )
             .addMigrations(
                 LifeUpDatabase.MIGRATION_1_2,
+                LifeUpDatabase.MIGRATION_2_3,
                 LifeUpDatabase.MIGRATION_3_4,
                 LifeUpDatabase.MIGRATION_4_5,
                 LifeUpDatabase.MIGRATION_5_6

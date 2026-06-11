@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import androidx.compose.runtime.Immutable
@@ -43,7 +43,7 @@ class SkillsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SkillsUiState())
     val uiState: StateFlow<SkillsUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     private var skillsJob: Job? = null
     private var energyJob: Job? = null
@@ -75,7 +75,7 @@ class SkillsViewModel @Inject constructor(
     private fun loadEnergy() {
         energyJob?.cancel()
         energyJob = viewModelScope.launch {
-            val todayStr = dateFormat.format(Date())
+            val todayStr = LocalDate.now().format(dateFormat)
             try {
                 dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
                     val state = dailyState ?: return@collect

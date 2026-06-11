@@ -103,7 +103,7 @@ fun TipCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Lightbulb,
-                            contentDescription = null,
+                            contentDescription = "提示",
                             tint = Color(0xFF42A5F5),
                             modifier = Modifier.size(16.dp)
                         )

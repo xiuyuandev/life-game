@@ -46,7 +46,8 @@ class GoldRepositoryImpl @Inject constructor(
     }
 
     override suspend fun spendGold(amount: Int): Boolean {
-        val currentBalance = getGoldBalance().let { var v = 0; it.collect { v = it }; v }
+        if (amount <= 0) return false
+        val currentBalance = getTotalGoldEarned() - getTotalGoldSpent()
         if (amount > currentBalance) return false
 
         val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)

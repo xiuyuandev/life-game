@@ -18,6 +18,7 @@ import com.lifeup.app.data.db.entity.SkillEntity
 import com.lifeup.app.data.db.entity.TimeRecordEntity
 import com.lifeup.app.data.db.entity.TodoEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -52,8 +53,12 @@ class DataExporter @Inject constructor(
         data.put("combos", comboDao.getAllList().toJsonArray { it.toJson() })
         data.put("items", itemDao.getAllList().toJsonArray { it.toJson() })
         data.put("dailyStates", dailyStateDao.getAll().toJsonArray { it.toJson() })
-        data.put("achievements", achievementDao.getAll().first().toJsonArray { it.toJson() })
-        data.put("characterState", characterStateDao.getState().first()?.toJson() ?: JSONObject())
+        data.put("achievements", try {
+            withTimeout(5000) { achievementDao.getAll().first() }.toJsonArray { it.toJson() }
+        } catch (_: Exception) { JSONArray() })
+        data.put("characterState", try {
+            withTimeout(5000) { characterStateDao.getState().first() }?.toJson() ?: JSONObject()
+        } catch (_: Exception) { JSONObject() })
         root.put("data", data)
 
         val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(

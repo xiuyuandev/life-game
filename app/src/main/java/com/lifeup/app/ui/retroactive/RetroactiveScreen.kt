@@ -54,8 +54,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.domain.model.Skill
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -220,8 +221,8 @@ private fun DatePickerField(
     onDateSelected: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val displayFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
-    val storageFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val displayFormat = DateTimeFormatter.ofPattern("yyyy年MM月dd日", Locale.getDefault())
+    val storageFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault())
 
     Column {
         Text(
@@ -232,25 +233,20 @@ private fun DatePickerField(
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedButton(
                 onClick = {
-                    val parsedDate = try {
-                        storageFormat.parse(selectedDate)
-                    } catch (e: Exception) {
-                        null
-                    }
-                    val cal = Calendar.getInstance().apply {
-                        if (parsedDate != null) time = parsedDate
+                    val date = try {
+                        LocalDate.parse(selectedDate, storageFormat)
+                    } catch (e: DateTimeParseException) {
+                        LocalDate.now()
                     }
                     DatePickerDialog(
                         context,
                         { _, year, month, dayOfMonth ->
-                            val newCal = Calendar.getInstance().apply {
-                                set(year, month, dayOfMonth)
-                            }
-                            onDateSelected(storageFormat.format(newCal.time))
+                            val picked = LocalDate.of(year, month + 1, dayOfMonth)
+                            onDateSelected(picked.format(storageFormat))
                         },
-                        cal.get(Calendar.YEAR),
-                        cal.get(Calendar.MONTH),
-                        cal.get(Calendar.DAY_OF_MONTH)
+                        date.year,
+                        date.monthValue - 1,
+                        date.dayOfMonth
                     ).show()
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -262,9 +258,9 @@ private fun DatePickerField(
                 modifier = Modifier.padding(end = 8.dp)
             )
             val displayText = try {
-                val date = storageFormat.parse(selectedDate)
-                if (date != null) displayFormat.format(date) else selectedDate
-            } catch (e: Exception) {
+                val date = LocalDate.parse(selectedDate, storageFormat)
+                date.format(displayFormat)
+            } catch (e: DateTimeParseException) {
                 selectedDate
             }
             Text(displayText)
