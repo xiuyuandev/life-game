@@ -17,8 +17,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
@@ -74,64 +78,31 @@ class StatsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val displayRangeFormat = SimpleDateFormat("M月d日", Locale.CHINESE)
+    private val dateFormatter = DateTimeFormatter.ISO_DATE
+    private val displayRangeFormatter = DateTimeFormatter.ofPattern("M月d日", Locale.CHINESE)
+    private val dayKeyFormatter = DateTimeFormatter.ofPattern("yyyyMMdd", Locale.getDefault())
+    private val dailyDisplayFormatter = DateTimeFormatter.ofPattern("MM/dd", Locale.getDefault())
 
     init {
         selectPeriod(StatsPeriod.WEEK)
     }
 
     fun selectPeriod(period: StatsPeriod) {
-        val cal = Calendar.getInstance()
-        val (startCal, endCal) = when (period) {
+        val today = LocalDate.now()
+        val (startDate, endDate) = when (period) {
             StatsPeriod.WEEK -> {
-                // Current week (Monday to Sunday)
-                val end = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }
-                val start = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                    if (after(end)) add(Calendar.WEEK_OF_YEAR, -1)
-                }
+                val start = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+                val end = today
                 start to end
             }
             StatsPeriod.MONTH -> {
-                val end = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }
-                val start = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_MONTH, 1)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
+                val start = today.with(TemporalAdjusters.firstDayOfMonth())
+                val end = today
                 start to end
             }
             StatsPeriod.YEAR -> {
-                val end = Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
-                    set(Calendar.SECOND, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }
-                val start = Calendar.getInstance().apply {
-                    set(Calendar.DAY_OF_YEAR, 1)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
+                val start = today.with(TemporalAdjusters.firstDayOfYear())
+                val end = today
                 start to end
             }
         }
@@ -139,138 +110,104 @@ class StatsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 period = period,
-                startDate = dateFormat.format(startCal.time),
-                endDate = dateFormat.format(endCal.time),
-                displayDateRange = "${displayRangeFormat.format(startCal.time)} - ${displayRangeFormat.format(endCal.time)}",
+                startDate = startDate.format(dateFormatter),
+                endDate = endDate.format(dateFormatter),
+                displayDateRange = "${startDate.format(displayRangeFormatter)} - ${endDate.format(displayRangeFormatter)}",
                 isLoading = true
             )
         }
-        loadPeriodData(startCal, endCal)
+        loadPeriodData(startDate, endDate)
     }
 
     fun selectPreviousPeriod() {
         val current = _uiState.value
         val period = current.period
-        val startCal = Calendar.getInstance().apply {
-            time = dateFormat.parse(current.startDate)!!
-        }
-        val endCal = Calendar.getInstance().apply {
-            time = dateFormat.parse(current.endDate)!!
-        }
+        val startDate = LocalDate.parse(current.startDate, dateFormatter)
+        val endDate = LocalDate.parse(current.endDate, dateFormatter)
 
-        when (period) {
+        val (newStart, newEnd) = when (period) {
             StatsPeriod.WEEK -> {
-                startCal.add(Calendar.WEEK_OF_YEAR, -1)
-                endCal.add(Calendar.WEEK_OF_YEAR, -1)
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                startDate.minusWeeks(1) to endDate.minusWeeks(1)
             }
             StatsPeriod.MONTH -> {
-                startCal.add(Calendar.MONTH, -1)
-                endCal.add(Calendar.MONTH, -1)
-                endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH))
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                val newStart = startDate.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth())
+                val newEnd = startDate.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth())
+                newStart to newEnd
             }
             StatsPeriod.YEAR -> {
-                startCal.add(Calendar.YEAR, -1)
-                endCal.add(Calendar.YEAR, -1)
-                endCal.set(Calendar.DAY_OF_YEAR, endCal.getActualMaximum(Calendar.DAY_OF_YEAR))
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                val newStart = startDate.minusYears(1).with(TemporalAdjusters.firstDayOfYear())
+                val newEnd = startDate.minusYears(1).with(TemporalAdjusters.lastDayOfYear())
+                newStart to newEnd
             }
         }
 
         _uiState.update {
             it.copy(
-                startDate = dateFormat.format(startCal.time),
-                endDate = dateFormat.format(endCal.time),
-                displayDateRange = "${displayRangeFormat.format(startCal.time)} - ${displayRangeFormat.format(endCal.time)}",
+                startDate = newStart.format(dateFormatter),
+                endDate = newEnd.format(dateFormatter),
+                displayDateRange = "${newStart.format(displayRangeFormatter)} - ${newEnd.format(displayRangeFormatter)}",
                 isLoading = true
             )
         }
-        loadPeriodData(startCal, endCal)
+        loadPeriodData(newStart, newEnd)
     }
 
     fun selectNextPeriod() {
         val current = _uiState.value
         val period = current.period
-        val startCal = Calendar.getInstance().apply {
-            time = dateFormat.parse(current.startDate)!!
-        }
-        val endCal = Calendar.getInstance().apply {
-            time = dateFormat.parse(current.endDate)!!
-        }
+        val startDate = LocalDate.parse(current.startDate, dateFormatter)
+        val endDate = LocalDate.parse(current.endDate, dateFormatter)
 
-        when (period) {
+        val (newStart, newEnd) = when (period) {
             StatsPeriod.WEEK -> {
-                startCal.add(Calendar.WEEK_OF_YEAR, 1)
-                endCal.add(Calendar.WEEK_OF_YEAR, 1)
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                startDate.plusWeeks(1) to endDate.plusWeeks(1)
             }
             StatsPeriod.MONTH -> {
-                startCal.add(Calendar.MONTH, 1)
-                endCal.add(Calendar.MONTH, 1)
-                endCal.set(Calendar.DAY_OF_MONTH, endCal.getActualMaximum(Calendar.DAY_OF_MONTH))
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                val newStart = startDate.plusMonths(1).with(TemporalAdjusters.firstDayOfMonth())
+                val newEnd = startDate.plusMonths(1).with(TemporalAdjusters.lastDayOfMonth())
+                newStart to newEnd
             }
             StatsPeriod.YEAR -> {
-                startCal.add(Calendar.YEAR, 1)
-                endCal.add(Calendar.YEAR, 1)
-                endCal.set(Calendar.DAY_OF_YEAR, endCal.getActualMaximum(Calendar.DAY_OF_YEAR))
-                endCal.set(Calendar.HOUR_OF_DAY, 23)
-                endCal.set(Calendar.MINUTE, 59)
-                endCal.set(Calendar.SECOND, 59)
-                endCal.set(Calendar.MILLISECOND, 999)
+                val newStart = startDate.plusYears(1).with(TemporalAdjusters.firstDayOfYear())
+                val newEnd = startDate.plusYears(1).with(TemporalAdjusters.lastDayOfYear())
+                newStart to newEnd
             }
         }
 
         _uiState.update {
             it.copy(
-                startDate = dateFormat.format(startCal.time),
-                endDate = dateFormat.format(endCal.time),
-                displayDateRange = "${displayRangeFormat.format(startCal.time)} - ${displayRangeFormat.format(endCal.time)}",
+                startDate = newStart.format(dateFormatter),
+                endDate = newEnd.format(dateFormatter),
+                displayDateRange = "${newStart.format(displayRangeFormatter)} - ${newEnd.format(displayRangeFormatter)}",
                 isLoading = true
             )
         }
-        loadPeriodData(startCal, endCal)
+        loadPeriodData(newStart, newEnd)
     }
 
-    private fun loadPeriodData(startCal: Calendar, endCal: Calendar) {
-        val startMs = startCal.timeInMillis
-        val endMs = endCal.timeInMillis
+    private fun loadPeriodData(startDate: LocalDate, endDate: LocalDate) {
+        val startMs = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMs = endDate.atTime(23, 59, 59, 999_999_999)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
         // Calculate previous period for comparison
-        val prevStartCal = startCal.clone() as Calendar
-        val prevEndCal = endCal.clone() as Calendar
-        when (_uiState.value.period) {
-            StatsPeriod.WEEK -> {
-                prevStartCal.add(Calendar.WEEK_OF_YEAR, -1)
-                prevEndCal.add(Calendar.WEEK_OF_YEAR, -1)
-            }
-            StatsPeriod.MONTH -> {
-                prevStartCal.add(Calendar.MONTH, -1)
-                prevEndCal.add(Calendar.MONTH, -1)
-            }
-            StatsPeriod.YEAR -> {
-                prevStartCal.add(Calendar.YEAR, -1)
-                prevEndCal.add(Calendar.YEAR, -1)
-            }
+        val prevStartDate = when (_uiState.value.period) {
+            StatsPeriod.WEEK -> startDate.minusWeeks(1)
+            StatsPeriod.MONTH -> startDate.minusMonths(1)
+            StatsPeriod.YEAR -> startDate.minusYears(1)
         }
-        val prevStartMs = prevStartCal.timeInMillis
-        val prevEndMs = prevEndCal.timeInMillis
+        val prevEndDate = when (_uiState.value.period) {
+            StatsPeriod.WEEK -> endDate.minusWeeks(1)
+            StatsPeriod.MONTH -> startDate.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth())
+            StatsPeriod.YEAR -> startDate.minusYears(1).with(TemporalAdjusters.lastDayOfYear())
+        }
+        val prevStartMs = prevStartDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val prevEndMs = prevEndDate.atTime(23, 59, 59, 999_999_999)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
         viewModelScope.launch {
             combine(
@@ -314,22 +251,23 @@ class StatsViewModel @Inject constructor(
                     .sortedByDescending { it.totalMinutes }
 
                 // Calculate daily data
-                val dayFormat = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
                 val dailyMap = mutableMapOf<String, DailyData>()
-                val iterCal = (startCal.clone() as Calendar)
-                while (iterCal.timeInMillis <= endCal.timeInMillis) {
-                    val key = dayFormat.format(iterCal.time)
+                var iterDate = startDate
+                while (!iterDate.isAfter(endDate)) {
+                    val key = iterDate.format(dayKeyFormatter)
                     dailyMap[key] = DailyData(
-                        date = SimpleDateFormat("MM/dd", Locale.getDefault()).format(iterCal.time),
+                        date = iterDate.format(dailyDisplayFormatter),
                         investmentMinutes = 0,
                         consumptionMinutes = 0
                     )
-                    iterCal.add(Calendar.DAY_OF_YEAR, 1)
+                    iterDate = iterDate.plusDays(1)
                 }
 
                 for (record in records) {
-                    val recCal = Calendar.getInstance().apply { timeInMillis = record.startTime }
-                    val key = dayFormat.format(recCal.time)
+                    val recDate = java.time.Instant.ofEpochMilli(record.startTime)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                    val key = recDate.format(dayKeyFormatter)
                     dailyMap[key]?.let { existing ->
                         dailyMap[key] = if (record.recordType == RecordType.INVESTMENT) {
                             existing.copy(investmentMinutes = existing.investmentMinutes + record.durationMinutes)

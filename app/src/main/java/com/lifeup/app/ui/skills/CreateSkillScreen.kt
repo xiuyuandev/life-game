@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -46,9 +47,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifeup.app.ui.components.doneKeyboardActions
+import com.lifeup.app.ui.components.doneKeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.BoundAttribute
@@ -108,6 +114,9 @@ fun CreateSkillScreen(
         }
     }
 
+    val focusManager = LocalFocusManager.current
+    val nameFocusRequester = remember { FocusRequester() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -128,6 +137,7 @@ fun CreateSkillScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
+                .imePadding()
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -158,9 +168,17 @@ fun CreateSkillScreen(
                 onValueChange = { viewModel.updateName(it) },
                 label = { Text("技能名称 *") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(nameFocusRequester),
                 shape = RoundedCornerShape(12.dp),
-                isError = uiState.errorMessage != null && uiState.name.isBlank()
+                isError = uiState.errorMessage != null && uiState.name.isBlank(),
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = doneKeyboardActions(focusManager) {
+                    if (uiState.canCreate) {
+                        viewModel.createSkill()
+                    }
+                }
             )
 
             // Category selection

@@ -13,14 +13,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -43,9 +46,12 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,17 +59,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lifeup.app.ui.components.doneKeyboardActions
+import com.lifeup.app.ui.components.doneKeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.lifeup.app.data.db.Priority
+import com.lifeup.app.ui.components.DismissBackground
 import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.ErrorState
 import com.lifeup.app.ui.components.HapticFeedbackHelper
+import com.lifeup.app.ui.components.ScrollToTopButton
 import com.lifeup.app.ui.components.TodoItem
 import java.time.LocalTime
 
@@ -79,6 +94,7 @@ fun TodayScreen(
     val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
     var addAsHabit by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     Scaffold(
         floatingActionButton = {
@@ -127,6 +143,7 @@ fun TodayScreen(
                 )
             } else {
                 LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -206,14 +223,28 @@ fun TodayScreen(
                         items = uiState.habits,
                         key = { "habit-${it.id}" }
                     ) { habit ->
-                        TodoItem(
-                            todo = habit,
-                            onToggle = {
-                                HapticFeedbackHelper.performTick(context)
-                                viewModel.toggleTodo(habit.id)
-                            },
-                            onDelete = { viewModel.deleteTodo(habit.id) }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.deleteTodo(habit.id)
+                                    true
+                                } else false
+                            }
                         )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = { DismissBackground(dismissState) },
+                            modifier = Modifier.animateItemPlacement()
+                        ) {
+                            TodoItem(
+                                todo = habit,
+                                onToggle = {
+                                    HapticFeedbackHelper.performTick(context)
+                                    viewModel.toggleTodo(habit.id)
+                                },
+                                onDelete = { viewModel.deleteTodo(habit.id) }
+                            )
+                        }
                     }
                 }
 
@@ -241,14 +272,28 @@ fun TodayScreen(
                         items = uiState.todos,
                         key = { "todo-${it.id}" }
                     ) { todo ->
-                        TodoItem(
-                            todo = todo,
-                            onToggle = {
-                                HapticFeedbackHelper.performTick(context)
-                                viewModel.toggleTodo(todo.id)
-                            },
-                            onDelete = { viewModel.deleteTodo(todo.id) }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                    viewModel.deleteTodo(todo.id)
+                                    true
+                                } else false
+                            }
                         )
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = { DismissBackground(dismissState) },
+                            modifier = Modifier.animateItemPlacement()
+                        ) {
+                            TodoItem(
+                                todo = todo,
+                                onToggle = {
+                                    HapticFeedbackHelper.performTick(context)
+                                    viewModel.toggleTodo(todo.id)
+                                },
+                                onDelete = { viewModel.deleteTodo(todo.id) }
+                            )
+                        }
                     }
                 }
 
@@ -265,6 +310,15 @@ fun TodayScreen(
                 item { Spacer(modifier = Modifier.height(72.dp)) }
             }
             }
+
+            ScrollToTopButton(
+                listState = listState,
+                onClick = {
+                    viewModel.viewModelScope.launch {
+                        listState.animateScrollToItem(0)
+                    }
+                }
+            )
         }
     }
 
@@ -486,6 +540,13 @@ private fun AddTodoSheet(
     var title by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(Priority.NONE) }
 
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -495,6 +556,7 @@ private fun AddTodoSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
+                .imePadding()
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -511,8 +573,16 @@ private fun AddTodoSheet(
                     Text(if (isHabit) "习惯名称" else "待办名称")
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                shape = RoundedCornerShape(12.dp),
+                keyboardOptions = doneKeyboardOptions(),
+                keyboardActions = doneKeyboardActions(focusManager) {
+                    if (title.isNotBlank()) {
+                        onConfirm(title, selectedPriority, null)
+                    }
+                }
             )
 
             // Priority selector

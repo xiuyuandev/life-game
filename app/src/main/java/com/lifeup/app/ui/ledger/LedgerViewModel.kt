@@ -15,8 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import javax.inject.Inject
 
@@ -59,19 +61,19 @@ class LedgerViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LedgerUiState())
     val uiState: StateFlow<LedgerUiState> = _uiState.asStateFlow()
 
-    private val monthFormat = SimpleDateFormat("yyyy-MM", Locale.getDefault())
-    private val displayMonthFormat = SimpleDateFormat("yyyy年MM月", Locale.CHINESE)
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val displayDateFormat = SimpleDateFormat("M月d日 EEEE", Locale.CHINESE)
+    private val monthFormatter = DateTimeFormatter.ofPattern("yyyy-MM", Locale.getDefault())
+    private val displayMonthFormatter = DateTimeFormatter.ofPattern("yyyy年MM月", Locale.CHINESE)
+    private val dateFormatter = DateTimeFormatter.ISO_DATE
+    private val displayDateFormatter = DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.CHINESE)
 
     init {
-        selectMonth(monthFormat.format(Calendar.getInstance().time))
+        selectMonth(LocalDate.now().format(monthFormatter))
     }
 
     fun selectMonth(month: String) {
         val displayMonth = try {
-            val parsed = monthFormat.parse(month)
-            if (parsed != null) displayMonthFormat.format(parsed) else month
+            val parsed = LocalDate.parse(month + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
+            parsed.format(displayMonthFormatter)
         } catch (e: Exception) {
             month
         }
@@ -88,57 +90,45 @@ class LedgerViewModel @Inject constructor(
 
     fun selectPreviousMonth() {
         val current = _uiState.value.selectedMonth
-        val cal = Calendar.getInstance()
-        try {
-            cal.time = monthFormat.parse(current)!!
+        val date = try {
+            val parsed = LocalDate.parse(current + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
+            parsed.minusMonths(1).format(monthFormatter)
         } catch (e: Exception) {
             return
         }
-        cal.add(Calendar.MONTH, -1)
-        selectMonth(monthFormat.format(cal.time))
+        selectMonth(date)
     }
 
     fun selectNextMonth() {
         val current = _uiState.value.selectedMonth
-        val cal = Calendar.getInstance()
-        try {
-            cal.time = monthFormat.parse(current)!!
+        val date = try {
+            val parsed = LocalDate.parse(current + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
+            parsed.plusMonths(1).format(monthFormatter)
         } catch (e: Exception) {
             return
         }
-        cal.add(Calendar.MONTH, 1)
-        selectMonth(monthFormat.format(cal.time))
+        selectMonth(date)
     }
 
     private fun loadMonthData(month: String) {
-        val cal = Calendar.getInstance()
-        try {
-            cal.time = monthFormat.parse(month)!!
+        val localDate = try {
+            LocalDate.parse(month + "-01", DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()))
         } catch (e: Exception) {
             return
         }
 
         // Start of month
-        val startCal = (cal.clone() as Calendar).apply {
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val startDate = localDate.with(TemporalAdjusters.firstDayOfMonth())
+        val startMs = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         // End of month
-        val endCal = (cal.clone() as Calendar).apply {
-            set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-            set(Calendar.HOUR_OF_DAY, 23)
-            set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59)
-            set(Calendar.MILLISECOND, 999)
-        }
+        val endDate = localDate.with(TemporalAdjusters.lastDayOfMonth())
+        val endMs = endDate.atTime(23, 59, 59, 999_999_999)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
-        val startMs = startCal.timeInMillis
-        val endMs = endCal.timeInMillis
-        val daysInMonth = endCal.get(Calendar.DAY_OF_MONTH)
+        val daysInMonth = endDate.dayOfMonth
 
         viewModelScope.launch {
             combine(
@@ -160,7 +150,10 @@ class LedgerViewModel @Inject constructor(
                         skillLevel = skill.level
                     )
                     LedgerEntry(
-                        date = dateFormat.format(record.startTime),
+                        date = java.time.Instant.ofEpochMilli(record.startTime)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                            .format(dateFormatter),
                         skillName = skill.name,
                         skillCategory = skill.category,
                         durationMinutes = record.durationMinutes,
@@ -173,8 +166,8 @@ class LedgerViewModel @Inject constructor(
                 // Group by date
                 val groupedEntries = entries.groupBy { entry ->
                     try {
-                        val parsed = dateFormat.parse(entry.date)
-                        if (parsed != null) displayDateFormat.format(parsed) else entry.date
+                        val parsed = LocalDate.parse(entry.date, dateFormatter)
+                        parsed.format(displayDateFormatter)
                     } catch (e: Exception) {
                         entry.date
                     }

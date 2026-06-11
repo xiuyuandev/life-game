@@ -16,9 +16,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 import javax.inject.Inject
 
@@ -82,18 +85,18 @@ class ReviewViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReviewUiState())
     val uiState: StateFlow<ReviewUiState> = _uiState.asStateFlow()
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    private val displayDateFormat = SimpleDateFormat("M月d日 EEEE", Locale.CHINESE)
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val dateFormatter = DateTimeFormatter.ISO_DATE
+    private val displayDateFormatter = DateTimeFormatter.ofPattern("M月d日 EEEE", Locale.CHINESE)
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
 
     init {
-        selectDate(dateFormat.format(Date()))
+        selectDate(LocalDate.now().format(dateFormatter))
     }
 
     fun selectDate(date: String) {
         val displayDate = try {
-            val parsed = dateFormat.parse(date)
-            if (parsed != null) displayDateFormat.format(parsed) else date
+            val parsed = LocalDate.parse(date, dateFormatter)
+            parsed.format(displayDateFormatter)
         } catch (e: Exception) {
             date
         }
@@ -105,11 +108,8 @@ class ReviewViewModel @Inject constructor(
     fun selectPreviousDay() {
         val current = _uiState.value.selectedDate
         val date = try {
-            val parsed = dateFormat.parse(current)
-            val cal = Calendar.getInstance()
-            cal.time = parsed!!
-            cal.add(Calendar.DAY_OF_YEAR, -1)
-            dateFormat.format(cal.time)
+            val parsed = LocalDate.parse(current, dateFormatter)
+            parsed.minusDays(1).format(dateFormatter)
         } catch (e: Exception) {
             current
         }
@@ -119,11 +119,8 @@ class ReviewViewModel @Inject constructor(
     fun selectNextDay() {
         val current = _uiState.value.selectedDate
         val date = try {
-            val parsed = dateFormat.parse(current)
-            val cal = Calendar.getInstance()
-            cal.time = parsed!!
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-            dateFormat.format(cal.time)
+            val parsed = LocalDate.parse(current, dateFormatter)
+            parsed.plusDays(1).format(dateFormatter)
         } catch (e: Exception) {
             current
         }
@@ -165,29 +162,24 @@ class ReviewViewModel @Inject constructor(
     }
 
     private fun getDayTimeRange(date: String): Pair<Long, Long> {
-        val cal = Calendar.getInstance()
-        try {
-            cal.time = dateFormat.parse(date)!!
+        val localDate = try {
+            LocalDate.parse(date, dateFormatter)
         } catch (e: Exception) {
-            cal.time = Date()
+            LocalDate.now()
         }
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        val startMs = cal.timeInMillis
-
-        cal.set(Calendar.HOUR_OF_DAY, 23)
-        cal.set(Calendar.MINUTE, 59)
-        cal.set(Calendar.SECOND, 59)
-        cal.set(Calendar.MILLISECOND, 999)
-        val endMs = cal.timeInMillis
+        val startMs = localDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val endMs = localDate.atTime(23, 59, 59, 999_999_999)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
 
         return Pair(startMs, endMs)
     }
 
     fun formatTime(timestamp: Long): String {
-        return timeFormat.format(Date(timestamp))
+        val instant = Instant.ofEpochMilli(timestamp)
+        val localTime = instant.atZone(ZoneId.systemDefault()).toLocalTime()
+        return localTime.format(timeFormatter)
     }
 
     fun formatMinutes(minutes: Int): String {

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -92,6 +93,7 @@ private val slotLabelMap: Map<SlotType, String> = mapOf(
 @Composable
 fun ShopScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToTimer: () -> Unit = {},
     viewModel: ShopViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -149,10 +151,15 @@ fun ShopScreen(
                 CircularProgressIndicator()
             }
         } else {
-            ShopContent(
-                uiState = uiState,
-                onPurchaseClick = { viewModel.showPurchaseDialog(it) }
-            )
+            if (uiState.goldBalance <= 0) {
+                EmptyGoldState(onNavigateToTimer = onNavigateToTimer)
+            } else {
+                ShopContent(
+                    uiState = uiState,
+                    onPurchaseClick = { viewModel.showPurchaseDialog(it) },
+                    onNavigateToTimer = onNavigateToTimer
+                )
+            }
         }
     }
 
@@ -244,9 +251,70 @@ fun ShopScreen(
 }
 
 @Composable
+private fun EmptyGoldState(onNavigateToTimer: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "💰",
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Text(
+                    text = "金币不足",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "通过计时专注来赚取金币，然后回来购买装备吧！",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Button(
+                    onClick = onNavigateToTimer,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFB300)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("去计时赚取金币")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ShopContent(
     uiState: ShopUiState,
-    onPurchaseClick: (ItemTemplate) -> Unit
+    onPurchaseClick: (ItemTemplate) -> Unit,
+    onNavigateToTimer: () -> Unit = {}
 ) {
     var selectedTierIndex by remember { mutableIntStateOf(0) }
     val tierTabs = listOf("全部") + ItemTier.entries.map { tierLabelMap[it] ?: it.name }
@@ -285,11 +353,35 @@ private fun ShopContent(
                 .padding(vertical = 48.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "该分类下暂无商品",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "💰",
+                    style = MaterialTheme.typography.displayLarge
+                )
+                Text(
+                    text = "金币不足，去计时赚取金币吧",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+                Button(
+                    onClick = onNavigateToTimer,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFB300)
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("去计时赚取金币")
+                }
+            }
         }
     } else {
         LazyVerticalGrid(

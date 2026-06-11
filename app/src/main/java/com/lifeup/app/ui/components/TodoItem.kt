@@ -18,10 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -189,21 +186,5 @@ fun TodoItem(
             )
         }
 
-        Spacer(modifier = Modifier.width(2.dp))
-
-        // Delete button
-        IconButton(
-            onClick = onDelete,
-            modifier = Modifier.size(28.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Default.DeleteOutline,
-                contentDescription = "删除",
-                modifier = Modifier.size(16.dp)
-            )
-        }
     }
 }

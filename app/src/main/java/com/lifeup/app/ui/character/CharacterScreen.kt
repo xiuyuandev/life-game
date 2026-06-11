@@ -731,9 +731,9 @@ private fun EquippedItemsSection(
                         .fillMaxWidth()
                         .drawBehind {
                             val stroke = Stroke(
-                                width = 1.dp.toPx(),
+                                width = 1.5.dp.toPx(),
                                 pathEffect = PathEffect.dashPathEffect(
-                                    floatArrayOf(8f, 8f),
+                                    floatArrayOf(10f, 8f),
                                     0f
                                 )
                             )
@@ -744,26 +744,38 @@ private fun EquippedItemsSection(
                             )
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.Transparent
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
                     ),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = emoji, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = emoji,
+                                fontSize = 22.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = label,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             )
                             Text(
-                                text = "空",
+                                text = "未装备",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                             )
