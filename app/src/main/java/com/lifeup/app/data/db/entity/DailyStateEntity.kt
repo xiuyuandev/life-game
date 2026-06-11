@@ -35,5 +35,8 @@ data class DailyStateEntity(
     val habitsCompleted: Int = 0,
 
     @ColumnInfo(name = "gold_earned")
-    val goldEarned: Int = 0
+    val goldEarned: Int = 0,
+
+    @ColumnInfo(name = "gold_spent")
+    val goldSpent: Int = 0
 )

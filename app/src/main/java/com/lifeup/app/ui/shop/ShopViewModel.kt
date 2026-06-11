@@ -178,10 +178,10 @@ class ShopViewModel @Inject constructor(
             )
 
             itemRepository.insertItem(item)
+            goldRepository.spendGold(template.price)
 
             _uiState.update {
                 it.copy(
-                    goldBalance = currentBalance - template.price,
                     purchaseSuccess = true
                 )
             }

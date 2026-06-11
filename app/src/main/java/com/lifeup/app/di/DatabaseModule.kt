@@ -2,6 +2,8 @@ package com.lifeup.app.di
 
 import android.content.Context
 import com.lifeup.app.data.db.LifeUpDatabase
+import com.lifeup.app.data.db.dao.CharacterStateDao
+import com.lifeup.app.data.db.dao.AchievementDao
 import com.lifeup.app.data.db.dao.ComboDao
 import com.lifeup.app.data.db.dao.DailyStateDao
 import com.lifeup.app.data.db.dao.ItemDao
@@ -22,7 +24,18 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): LifeUpDatabase {
-        return LifeUpDatabase.getDatabase(context)
+        return Room.databaseBuilder(
+            context.applicationContext,
+            LifeUpDatabase::class.java,
+            "lifeup_database"
+        )
+            .addMigrations(
+                LifeUpDatabase.MIGRATION_1_2,
+                LifeUpDatabase.MIGRATION_3_4,
+                LifeUpDatabase.MIGRATION_4_5,
+                LifeUpDatabase.MIGRATION_5_6
+            )
+            .build()
     }
 
     @Provides
@@ -53,5 +66,15 @@ object DatabaseModule {
     @Provides
     fun provideDailyStateDao(database: LifeUpDatabase): DailyStateDao {
         return database.dailyStateDao()
+    }
+
+    @Provides
+    fun provideAchievementDao(database: LifeUpDatabase): AchievementDao {
+        return database.achievementDao()
+    }
+
+    @Provides
+    fun provideCharacterStateDao(database: LifeUpDatabase): CharacterStateDao {
+        return database.characterStateDao()
     }
 }

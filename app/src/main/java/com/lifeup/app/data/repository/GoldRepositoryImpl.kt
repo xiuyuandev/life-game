@@ -3,9 +3,12 @@ package com.lifeup.app.data.repository
 import com.lifeup.app.data.db.dao.DailyStateDao
 import com.lifeup.app.data.db.dao.ItemDao
 import com.lifeup.app.data.db.dao.TimeRecordDao
+import com.lifeup.app.data.db.entity.DailyStateEntity
 import com.lifeup.app.domain.repository.GoldRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,8 +33,8 @@ class GoldRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getTotalGoldSpent(): Int {
-        val items = itemDao.getAllList()
-        return items.filter { it.price > 0 }.sumOf { it.price }
+        val dailyStates = dailyStateDao.getAll()
+        return dailyStates.sumOf { it.goldSpent }
     }
 
     override fun getGoldBalance(): Flow<Int> {
@@ -40,5 +43,27 @@ class GoldRepositoryImpl @Inject constructor(
             val spent = getTotalGoldSpent()
             emit((earned - spent).coerceAtLeast(0))
         }
+    }
+
+    override suspend fun spendGold(amount: Int): Boolean {
+        val currentBalance = getGoldBalance().let { var v = 0; it.collect { v = it }; v }
+        if (amount > currentBalance) return false
+
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+        val todayState = dailyStateDao.getByDateSync(today)
+
+        if (todayState != null) {
+            dailyStateDao.update(
+                todayState.copy(goldSpent = todayState.goldSpent + amount)
+            )
+        } else {
+            dailyStateDao.insert(
+                DailyStateEntity(
+                    date = today,
+                    goldSpent = amount
+                )
+            )
+        }
+        return true
     }
 }

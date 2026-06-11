@@ -11,5 +11,6 @@ data class DailyState(
     val isFirstTimerUsed: Boolean = false,
     val todosCompleted: Int = 0,
     val habitsCompleted: Int = 0,
-    val goldEarned: Int = 0
+    val goldEarned: Int = 0,
+    val goldSpent: Int = 0
 )

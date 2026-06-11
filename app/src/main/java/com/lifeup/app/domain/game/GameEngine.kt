@@ -11,6 +11,7 @@ import com.lifeup.app.domain.model.DailyState
 import com.lifeup.app.domain.model.Item
 import com.lifeup.app.domain.model.Skill
 import com.lifeup.app.domain.model.TimeRecord
+import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.ItemRepository
@@ -42,7 +43,8 @@ object GameEngine {
         timeRecordRepository: TimeRecordRepository,
         dailyStateRepository: DailyStateRepository,
         comboRepository: ComboRepository,
-        itemRepository: ItemRepository
+        itemRepository: ItemRepository,
+        characterStateRepository: CharacterStateRepository
     ): TimerResult {
         val now = System.currentTimeMillis()
         val skill = skillRepository.getSkillById(skillId)
@@ -69,6 +71,10 @@ object GameEngine {
         val leveledSkill = checkLevelUp(updatedSkill)
         val leveledUp = leveledSkill.level > skill.level
         skillRepository.updateSkill(leveledSkill)
+
+        // c2. Persist character exp and time
+        characterStateRepository.addExp(expGained)
+        characterStateRepository.addTime(durationMinutes)
 
         // d. Calculate exp using ExpCalculator
         val today = LocalDate.now().format(dateFormatter)
@@ -113,6 +119,7 @@ object GameEngine {
 
         // g. Check for item unlocks on level up
         val itemsUnlocked = if (leveledUp) {
+            characterStateRepository.updateMaxSkillLevel(leveledSkill.level)
             checkAndUnlockItems(leveledSkill, itemRepository)
         } else {
             emptyList()

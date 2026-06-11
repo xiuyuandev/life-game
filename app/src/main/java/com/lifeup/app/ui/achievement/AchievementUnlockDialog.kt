@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.lifeup.app.domain.game.Achievement
+import com.lifeup.app.domain.model.Achievement
 import androidx.compose.material3.AlertDialog
 
 @Composable
@@ -48,7 +48,7 @@ fun AchievementUnlockDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = achievement.name,
+                    text = achievement.title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

@@ -39,7 +39,8 @@ fun DailyStateEntity.toDomain(): DailyState {
         isFirstTimerUsed = isFirstTimerUsed,
         todosCompleted = todosCompleted,
         habitsCompleted = habitsCompleted,
-        goldEarned = goldEarned
+        goldEarned = goldEarned,
+        goldSpent = goldSpent
     )
 }
 
@@ -55,6 +56,7 @@ fun DailyState.toEntity(): DailyStateEntity {
         isFirstTimerUsed = isFirstTimerUsed,
         todosCompleted = todosCompleted,
         habitsCompleted = habitsCompleted,
-        goldEarned = goldEarned
+        goldEarned = goldEarned,
+        goldSpent = goldSpent
     )
 }

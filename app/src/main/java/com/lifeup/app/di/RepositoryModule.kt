@@ -1,12 +1,15 @@
 package com.lifeup.app.di
 
+import com.lifeup.app.data.repository.CharacterStateRepositoryImpl
 import com.lifeup.app.data.repository.ComboRepositoryImpl
 import com.lifeup.app.data.repository.DailyStateRepositoryImpl
+import com.lifeup.app.data.repository.AchievementRepositoryImpl
 import com.lifeup.app.data.repository.GoldRepositoryImpl
 import com.lifeup.app.data.repository.ItemRepositoryImpl
 import com.lifeup.app.data.repository.SkillRepositoryImpl
 import com.lifeup.app.data.repository.TimeRecordRepositoryImpl
 import com.lifeup.app.data.repository.TodoRepositoryImpl
+import com.lifeup.app.domain.repository.AchievementRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.GoldRepository
@@ -51,4 +54,12 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindGoldRepository(impl: GoldRepositoryImpl): GoldRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAchievementRepository(impl: AchievementRepositoryImpl): AchievementRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCharacterStateRepository(impl: CharacterStateRepositoryImpl): CharacterStateRepository
 }

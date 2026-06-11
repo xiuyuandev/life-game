@@ -14,6 +14,9 @@ interface DailyStateDao {
     @Query("SELECT * FROM daily_states WHERE date = :date LIMIT 1")
     fun getByDate(date: String): Flow<DailyStateEntity?>
 
+    @Query("SELECT * FROM daily_states WHERE date = :date LIMIT 1")
+    suspend fun getByDateSync(date: String): DailyStateEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(dailyState: DailyStateEntity): Long
 

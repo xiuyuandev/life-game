@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.lifeup.app.domain.game.Achievement
-import com.lifeup.app.domain.game.AchievementCategory
+import com.lifeup.app.domain.model.Achievement
+import com.lifeup.app.domain.model.AchievementCategory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -229,7 +229,7 @@ private fun AchievementCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = achievement.name,
+                    text = achievement.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = if (achievement.isUnlocked) {
