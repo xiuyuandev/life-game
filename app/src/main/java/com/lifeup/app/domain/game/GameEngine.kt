@@ -16,6 +16,7 @@ import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.ItemRepository
 import com.lifeup.app.domain.repository.SkillRepository
+import com.lifeup.app.domain.repository.AchievementRepository
 import com.lifeup.app.domain.repository.TimeRecordRepository
 import com.lifeup.app.domain.repository.TodoRepository
 import kotlinx.coroutines.flow.first
@@ -44,7 +45,8 @@ object GameEngine {
         dailyStateRepository: DailyStateRepository,
         comboRepository: ComboRepository,
         itemRepository: ItemRepository,
-        characterStateRepository: CharacterStateRepository
+        characterStateRepository: CharacterStateRepository,
+        achievementRepository: AchievementRepository
     ): TimerResult {
         val now = System.currentTimeMillis()
         val skill = skillRepository.getSkillById(skillId)

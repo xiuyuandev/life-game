@@ -9,6 +9,7 @@ import com.lifeup.app.domain.model.Todo
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TodoRepository
+import com.lifeup.app.data.preferences.SettingsPrefs
 import com.lifeup.app.ui.skills.SKILL_TEMPLATES
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ data class OnboardingUiState(
 class OnboardingViewModel @Inject constructor(
     private val skillRepository: SkillRepository,
     private val todoRepository: TodoRepository,
-    private val dailyStateRepository: DailyStateRepository
+    private val dailyStateRepository: DailyStateRepository,
+    private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -113,6 +115,12 @@ class OnboardingViewModel @Inject constructor(
                     currentStep = 3
                 )
             }
+        }
+    }
+
+    fun markOnboardingCompleted() {
+        viewModelScope.launch {
+            settingsPrefs.setOnboardingCompleted(true)
         }
     }
 }

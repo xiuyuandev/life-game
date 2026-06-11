@@ -34,6 +34,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,12 +55,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.Priority
 import com.lifeup.app.ui.components.EnergyBar
+import com.lifeup.app.ui.components.ErrorState
+import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.components.TodoItem
 import java.time.LocalTime
 
@@ -71,6 +76,7 @@ fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
     var addAsHabit by remember { mutableStateOf(false) }
 
@@ -78,6 +84,7 @@ fun TodayScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
+                    HapticFeedbackHelper.performLightClick(context)
                     addAsHabit = false
                     showAddDialog = true
                 },
@@ -96,20 +103,32 @@ fun TodayScreen(
             }
         }
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
+        val pullToRefreshState = rememberPullToRefreshState()
+        PullToRefreshBox(
+            state = pullToRefreshState,
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.error != null) {
+                ErrorState(
+                    message = uiState.error,
+                    onRetry = { viewModel.refresh() },
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                    .fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -189,7 +208,10 @@ fun TodayScreen(
                     ) { habit ->
                         TodoItem(
                             todo = habit,
-                            onToggle = { viewModel.toggleTodo(habit.id) },
+                            onToggle = {
+                                HapticFeedbackHelper.performTick(context)
+                                viewModel.toggleTodo(habit.id)
+                            },
                             onDelete = { viewModel.deleteTodo(habit.id) }
                         )
                     }
@@ -221,7 +243,10 @@ fun TodayScreen(
                     ) { todo ->
                         TodoItem(
                             todo = todo,
-                            onToggle = { viewModel.toggleTodo(todo.id) },
+                            onToggle = {
+                                HapticFeedbackHelper.performTick(context)
+                                viewModel.toggleTodo(todo.id)
+                            },
                             onDelete = { viewModel.deleteTodo(todo.id) }
                         )
                     }
@@ -238,6 +263,7 @@ fun TodayScreen(
 
                 // Bottom spacing for FAB
                 item { Spacer(modifier = Modifier.height(72.dp)) }
+            }
             }
         }
     }

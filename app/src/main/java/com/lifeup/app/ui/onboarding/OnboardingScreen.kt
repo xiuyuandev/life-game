@@ -57,7 +57,10 @@ fun OnboardingScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         // Skip button in top-right corner
         TextButton(
-            onClick = onComplete,
+            onClick = {
+                viewModel.markOnboardingCompleted()
+                onComplete()
+            },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
@@ -105,6 +108,7 @@ fun OnboardingScreen(
                         uiState = uiState,
                         onStartTimer = {
                             val skillId = uiState.createdSkillId
+                            viewModel.markOnboardingCompleted()
                             onNavigateToTimer(skillId)
                             onComplete()
                         }

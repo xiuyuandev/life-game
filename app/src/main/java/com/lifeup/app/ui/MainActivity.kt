@@ -34,14 +34,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(
-    themeViewModel: ThemeViewModel = hiltViewModel()
+    themeViewModel: ThemeViewModel = hiltViewModel(),
+    mainViewModel: MainViewModel = hiltViewModel()
 ) {
     val themeMode by themeViewModel.themeMode.collectAsStateWithLifecycle()
+    val isOnboardingCompleted by mainViewModel.isOnboardingCompleted.collectAsStateWithLifecycle()
 
     LifeUpTheme(themeMode = themeMode) {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+
+        val startDestination = if (isOnboardingCompleted) {
+            Screen.Today.route
+        } else {
+            Screen.Onboarding.route
+        }
 
         val showBottomBar = currentRoute in listOf(
             Screen.Today.route,
@@ -71,7 +79,7 @@ fun MainScreen(
         ) { innerPadding ->
             LifeUpNavGraph(
                 navController = navController,
-                startDestination = Screen.Today.route,
+                startDestination = startDestination,
                 modifier = Modifier.padding(innerPadding)
             )
         }

@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 
 data class AchievementUiState(
@@ -27,6 +30,9 @@ class AchievementViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AchievementUiState())
     val uiState: StateFlow<AchievementUiState> = _uiState.asStateFlow()
+
+    private val _newlyUnlocked = MutableSharedFlow<Achievement>()
+    val newlyUnlocked: SharedFlow<Achievement> = _newlyUnlocked.asSharedFlow()
 
     init {
         viewModelScope.launch {
@@ -46,6 +52,10 @@ class AchievementViewModel @Inject constructor(
                     achievements.find { it.id in newlyUnlockedIds }
                 } else {
                     null
+                }
+
+                if (newlyUnlocked != null) {
+                    _newlyUnlocked.emit(newlyUnlocked)
                 }
 
                 _uiState.update {

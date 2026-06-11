@@ -23,6 +23,8 @@ import javax.inject.Inject
 data class SkillsUiState(
     val skills: List<Skill> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val error: String? = null,
     val energy: Float = 0f,
     val energyCap: Float = 100f
 )
@@ -45,10 +47,20 @@ class SkillsViewModel @Inject constructor(
         loadEnergy()
     }
 
-    private fun loadActiveSkills() {
+    fun refresh() {
+        loadActiveSkills(isRefresh = true)
+        loadEnergy()
+    }
+
+    private fun loadActiveSkills(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            skillRepository.getActiveSkills().collect { skills ->
-                _uiState.update { it.copy(skills = skills, isLoading = false) }
+            _uiState.update { it.copy(isLoading = !isRefresh, isRefreshing = isRefresh, error = null) }
+            try {
+                skillRepository.getActiveSkills().collect { skills ->
+                    _uiState.update { it.copy(skills = skills, isLoading = false, isRefreshing = false, error = null) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, isRefreshing = false, error = e.message ?: "加载失败") }
             }
         }
     }
@@ -56,9 +68,13 @@ class SkillsViewModel @Inject constructor(
     private fun loadEnergy() {
         viewModelScope.launch {
             val todayStr = dateFormat.format(Date())
-            dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
-                val state = dailyState ?: return@collect
-                _uiState.update { it.copy(energy = state.energy, energyCap = state.energyCap) }
+            try {
+                dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
+                    val state = dailyState ?: return@collect
+                    _uiState.update { it.copy(energy = state.energy, energyCap = state.energyCap) }
+                }
+            } catch (_: Exception) {
+                // Energy load failure is non-critical
             }
         }
     }

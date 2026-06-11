@@ -20,6 +20,7 @@ import com.lifeup.app.ui.combo.ComboScreen
 import com.lifeup.app.ui.ledger.LedgerScreen
 import com.lifeup.app.ui.onboarding.OnboardingScreen
 import com.lifeup.app.ui.profile.ProfileScreen
+import com.lifeup.app.ui.splash.SplashScreen
 import com.lifeup.app.ui.retroactive.RetroactiveScreen
 import com.lifeup.app.ui.review.ReviewScreen
 import com.lifeup.app.ui.shop.ShopScreen
@@ -183,6 +184,16 @@ fun LifeUpNavGraph(
         composable(Screen.Ledger.route) {
             LedgerScreen(
                 onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSplashComplete = {
+                    navController.navigate(Screen.Today.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
             )
         }
 

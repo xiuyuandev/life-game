@@ -1,12 +1,16 @@
 package com.lifeup.app.data.export
 
 import android.content.Context
+import com.lifeup.app.data.db.dao.AchievementDao
+import com.lifeup.app.data.db.dao.CharacterStateDao
 import com.lifeup.app.data.db.dao.ComboDao
 import com.lifeup.app.data.db.dao.DailyStateDao
 import com.lifeup.app.data.db.dao.ItemDao
 import com.lifeup.app.data.db.dao.SkillDao
 import com.lifeup.app.data.db.dao.TimeRecordDao
 import com.lifeup.app.data.db.dao.TodoDao
+import com.lifeup.app.data.db.entity.AchievementEntity
+import com.lifeup.app.data.db.entity.CharacterStateEntity
 import com.lifeup.app.data.db.entity.ComboEntity
 import com.lifeup.app.data.db.entity.DailyStateEntity
 import com.lifeup.app.data.db.entity.ItemEntity
@@ -30,6 +34,8 @@ class DataExporter @Inject constructor(
     private val comboDao: ComboDao,
     private val itemDao: ItemDao,
     private val dailyStateDao: DailyStateDao,
+    private val achievementDao: AchievementDao,
+    private val characterStateDao: CharacterStateDao,
     @ApplicationContext private val context: Context
 ) {
 
@@ -46,6 +52,8 @@ class DataExporter @Inject constructor(
         data.put("combos", comboDao.getAllList().toJsonArray { it.toJson() })
         data.put("items", itemDao.getAllList().toJsonArray { it.toJson() })
         data.put("dailyStates", dailyStateDao.getAll().toJsonArray { it.toJson() })
+        data.put("achievements", achievementDao.getAll().first().toJsonArray { it.toJson() })
+        data.put("characterState", characterStateDao.getState().first()?.toJson() ?: JSONObject())
         root.put("data", data)
 
         val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
@@ -81,6 +89,7 @@ class DataExporter @Inject constructor(
             comboDao.deleteAll()
             itemDao.deleteAll()
             dailyStateDao.deleteAll()
+            achievementDao.deleteAll()
             skillDao.deleteAll()
 
             // Insert imported data (skills first due to foreign key dependencies)
@@ -107,6 +116,15 @@ class DataExporter @Inject constructor(
             data.optJSONArray("dailyStates")?.let { arr ->
                 val entities = (0 until arr.length()).map { arr.getJSONObject(it).toDailyStateEntity() }
                 if (entities.isNotEmpty()) dailyStateDao.insertAll(entities)
+            }
+            data.optJSONArray("achievements")?.let { arr ->
+                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toAchievementEntity() }
+                if (entities.isNotEmpty()) achievementDao.insertAll(entities)
+            }
+            data.optJSONObject("characterState")?.let { obj ->
+                if (obj.has("id")) {
+                    characterStateDao.insert(obj.toCharacterStateEntity())
+                }
             }
 
             true
@@ -307,6 +325,8 @@ class DataExporter @Inject constructor(
         put("isFirstTimerUsed", isFirstTimerUsed)
         put("todosCompleted", todosCompleted)
         put("habitsCompleted", habitsCompleted)
+        put("goldEarned", goldEarned)
+        put("goldSpent", goldSpent)
     }
 
     private fun JSONObject.toDailyStateEntity() = DailyStateEntity(
@@ -319,6 +339,54 @@ class DataExporter @Inject constructor(
         streakCount = optInt("streakCount", 0),
         isFirstTimerUsed = optBoolean("isFirstTimerUsed", false),
         todosCompleted = optInt("todosCompleted", 0),
-        habitsCompleted = optInt("habitsCompleted", 0)
+        habitsCompleted = optInt("habitsCompleted", 0),
+        goldEarned = optInt("goldEarned", 0),
+        goldSpent = optInt("goldSpent", 0)
+    )
+
+    private fun AchievementEntity.toJson() = JSONObject().apply {
+        put("id", id)
+        put("title", title)
+        put("description", description)
+        put("category", category)
+        put("isUnlocked", isUnlocked)
+        put("unlockedAt", unlockedAt)
+        put("progress", progress)
+        put("target", target)
+    }
+
+    private fun JSONObject.toAchievementEntity() = AchievementEntity(
+        id = getString("id"),
+        title = getString("title"),
+        description = getString("description"),
+        category = getString("category"),
+        isUnlocked = optBoolean("isUnlocked", false),
+        unlockedAt = if (has("unlockedAt") && !isNull("unlockedAt")) getLong("unlockedAt") else null,
+        progress = optInt("progress", 0),
+        target = optInt("target", 1)
+    )
+
+    private fun CharacterStateEntity.toJson() = JSONObject().apply {
+        put("id", id)
+        put("totalExp", totalExp)
+        put("characterLevel", characterLevel)
+        put("title", title)
+        put("totalTimeMinutes", totalTimeMinutes)
+        put("skillCount", skillCount)
+        put("maxSkillLevel", maxSkillLevel)
+        put("achievementsUnlocked", achievementsUnlocked)
+        put("lastUpdated", lastUpdated)
+    }
+
+    private fun JSONObject.toCharacterStateEntity() = CharacterStateEntity(
+        id = optInt("id", 1),
+        totalExp = optLong("totalExp", 0L),
+        characterLevel = optInt("characterLevel", 1),
+        title = optString("title", "初学者"),
+        totalTimeMinutes = optLong("totalTimeMinutes", 0L),
+        skillCount = optInt("skillCount", 0),
+        maxSkillLevel = optInt("maxSkillLevel", 1),
+        achievementsUnlocked = optInt("achievementsUnlocked", 0),
+        lastUpdated = optLong("lastUpdated", System.currentTimeMillis())
     )
 }

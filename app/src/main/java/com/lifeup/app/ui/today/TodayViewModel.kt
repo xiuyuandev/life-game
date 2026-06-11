@@ -31,6 +31,8 @@ data class TodayUiState(
     val streakCount: Int = 0,
     val todayDate: String = "",
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val error: String? = null,
     val tip: TipContent? = null
 )
 
@@ -97,49 +99,72 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private fun loadTodayData() {
+    fun refresh() {
+        loadTodayData(isRefresh = true)
+    }
+
+    private fun loadTodayData(isRefresh: Boolean = false) {
         val todayStr = dateFormat.format(Date())
         val displayDate = displayDateFormat.format(Date())
 
         viewModelScope.launch {
-            _uiState.update { it.copy(todayDate = displayDate, isLoading = true) }
-
-            combine(
-                todoRepository.getHabitsByDate(todayStr),
-                todoRepository.getTodosByDate(todayStr),
-                dailyStateRepository.getStateByDate(todayStr)
-            ) { habits, todos, dailyState ->
-                val state = dailyState ?: DailyState(
-                    date = todayStr,
-                    energy = 0f,
-                    energyCap = 100f,
-                    streakCount = 0
+            _uiState.update {
+                it.copy(
+                    todayDate = displayDate,
+                    isLoading = !isRefresh,
+                    isRefreshing = isRefresh,
+                    error = null
                 )
-                Triple(habits, todos, state)
-            }.collect { (habits, todos, dailyState) ->
-                val streak = dailyStateRepository.getLatestStreak() ?: dailyState.streakCount
+            }
 
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        habits = habits,
-                        todos = todos,
-                        energy = dailyState.energy,
-                        energyCap = dailyState.energyCap,
-                        streakCount = streak,
-                        isLoading = false
+            try {
+                combine(
+                    todoRepository.getHabitsByDate(todayStr),
+                    todoRepository.getTodosByDate(todayStr),
+                    dailyStateRepository.getStateByDate(todayStr)
+                ) { habits, todos, dailyState ->
+                    val state = dailyState ?: DailyState(
+                        date = todayStr,
+                        energy = 0f,
+                        energyCap = 100f,
+                        streakCount = 0
                     )
-                }
+                    Triple(habits, todos, state)
+                }.collect { (habits, todos, dailyState) ->
+                    val streak = dailyStateRepository.getLatestStreak() ?: dailyState.streakCount
 
-                // Persist counts to DailyState if out of sync
-                val habitsCompleted = habits.count { it.isCompleted }
-                val todosCompleted = todos.count { it.isCompleted }
-                if (dailyState.habitsCompleted != habitsCompleted || dailyState.todosCompleted != todosCompleted || dailyState.streakCount != streak) {
-                    dailyStateRepository.insertOrUpdateState(
-                        dailyState.copy(
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            habits = habits,
+                            todos = todos,
+                            energy = dailyState.energy,
+                            energyCap = dailyState.energyCap,
                             streakCount = streak,
-                            habitsCompleted = habitsCompleted,
-                            todosCompleted = todosCompleted
+                            isLoading = false,
+                            isRefreshing = false,
+                            error = null
                         )
+                    }
+
+                    // Persist counts to DailyState if out of sync
+                    val habitsCompleted = habits.count { it.isCompleted }
+                    val todosCompleted = todos.count { it.isCompleted }
+                    if (dailyState.habitsCompleted != habitsCompleted || dailyState.todosCompleted != todosCompleted || dailyState.streakCount != streak) {
+                        dailyStateRepository.insertOrUpdateState(
+                            dailyState.copy(
+                                streakCount = streak,
+                                habitsCompleted = habitsCompleted,
+                                todosCompleted = todosCompleted
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = e.message ?: "加载失败"
                     )
                 }
             }

@@ -68,6 +68,7 @@ import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.domain.game.TimerResult
 import com.lifeup.app.service.TimerManager
+import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.theme.MonospaceFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -196,7 +197,10 @@ fun TimerScreen(
                         !uiState.isRunning -> {
                             // Start button - large and prominent
                             Button(
-                                onClick = { viewModel.startTimer() },
+                                onClick = {
+                                    HapticFeedbackHelper.performHeavyClick(context)
+                                    viewModel.startTimer()
+                                },
                                 modifier = Modifier.size(80.dp),
                                 shape = CircleShape,
                                 colors = ButtonDefaults.buttonColors(
@@ -242,7 +246,10 @@ fun TimerScreen(
 
                             // Stop button
                             Button(
-                                onClick = { viewModel.stopTimer() },
+                                onClick = {
+                                    HapticFeedbackHelper.performSuccess(context)
+                                    viewModel.stopTimer()
+                                },
                                 modifier = Modifier.size(68.dp),
                                 shape = CircleShape,
                                 colors = ButtonDefaults.buttonColors(
@@ -482,6 +489,8 @@ private fun TimerSettlementSheet(
 
                     // Level up
                     if (result.leveledUp) {
+                        val context = LocalContext.current
+                        HapticFeedbackHelper.performLevelUp(context)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier

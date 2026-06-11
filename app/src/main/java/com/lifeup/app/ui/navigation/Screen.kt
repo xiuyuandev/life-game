@@ -10,6 +10,7 @@ sealed class Screen(val route: String, val title: String) {
     data object Character : Screen("character", "角色馆")
     data object Profile : Screen("profile", "我的")
     data object Review : Screen("review", "回顾")
+    data object Splash : Screen("splash", "启动页")
     data object Onboarding : Screen("onboarding", "引导")
     data object Achievement : Screen("achievement", "成就墙")
     data object Retroactive : Screen("retroactive", "补录时间")
