@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.lifeup.app.ui.theme.EnergyAmber
 import com.lifeup.app.ui.theme.EnergyAmberDark
@@ -24,7 +26,9 @@ fun EnergyBar(
 ) {
     val progress = if (cap > 0f) (current / cap).coerceIn(0f, 1f) else 0f
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) {
+        contentDescription = "能量条: ${current.toInt()}/${cap.toInt()}"
+    }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

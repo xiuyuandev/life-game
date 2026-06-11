@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:background="@drawable/widget_background">
+
+    <!-- App Title -->
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="人生升级"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="#FF6B35" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical">
+
+        <!-- Energy Label -->
+        <TextView
+            android:id="@+id/widget_energy_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="能量"
+            android:textSize="12sp"
+            android:textColor="#666666" />
+
+        <!-- Energy Progress Bar -->
+        <ProgressBar
+            android:id="@+id/widget_energy_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="12dp"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_bar" />
+
+        <!-- Energy Value -->
+        <TextView
+            android:id="@+id/widget_energy_value"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0/100"
+            android:textSize="11sp"
+            android:textColor="#999999" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="6dp">
+
+        <!-- Investment Time -->
+        <TextView
+            android:id="@+id/widget_investment_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="投资时间: 0分钟"
+            android:textSize="12sp"
+            android:textColor="#333333" />
+
+        <!-- Streak Count -->
+        <TextView
+            android:id="@+id/widget_streak"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔥 0天"
+            android:textSize="12sp"
+            android:textColor="#333333" />
+    </LinearLayout>
+
+    <!-- Quick Action Button -->
+    <TextView
+        android:id="@+id/widget_open_app"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="打开应用"
+        android:textSize="13sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/widget_button_background" />
+
+</LinearLayout>

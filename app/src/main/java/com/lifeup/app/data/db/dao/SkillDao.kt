@@ -44,4 +44,7 @@ interface SkillDao {
 
     @Query("DELETE FROM skills")
     suspend fun deleteAll()
+
+    @Query("SELECT MIN(created_at) FROM skills WHERE status = 'ACTIVE'")
+    suspend fun getEarliestCreatedAt(): Long?
 }

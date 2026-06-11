@@ -37,6 +37,7 @@ class SettingsPrefs @Inject constructor(
         val FIRST_TIMER_USED_TODAY = booleanPreferencesKey("first_timer_used_today")
         val OUTFIT_PRESETS = stringPreferencesKey("outfit_presets")
         val LAST_BACKUP_DATE = stringPreferencesKey("last_backup_date")
+        val DISMISSED_TIPS = stringPreferencesKey("dismissed_tips")
     }
 
     fun getThemeMode(): Flow<String> {
@@ -102,6 +103,22 @@ class SettingsPrefs @Inject constructor(
     suspend fun setLastBackupDate(date: String) {
         dataStore.edit { preferences ->
             preferences[Keys.LAST_BACKUP_DATE] = date
+        }
+    }
+
+    fun getDismissedTips(): Flow<Set<String>> {
+        return dataStore.data.map { preferences ->
+            val raw = preferences[Keys.DISMISSED_TIPS] ?: ""
+            if (raw.isBlank()) emptySet() else raw.split(",").toSet()
+        }
+    }
+
+    suspend fun dismissTip(tipId: String) {
+        dataStore.edit { preferences ->
+            val current = preferences[Keys.DISMISSED_TIPS] ?: ""
+            val set = if (current.isBlank()) mutableSetOf() else current.split(",").toMutableSet()
+            set.add(tipId)
+            preferences[Keys.DISMISSED_TIPS] = set.joinToString(",")
         }
     }
 }

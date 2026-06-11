@@ -51,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.Priority
 import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.TodoItem
+import com.lifeup.app.ui.today.TipCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,6 +104,16 @@ fun TodayScreen(
                         todayDate = uiState.todayDate,
                         streakCount = uiState.streakCount
                     )
+                }
+
+                // Tip card
+                if (uiState.tip != null) {
+                    item {
+                        TipCard(
+                            tip = uiState.tip,
+                            onDismiss = { viewModel.dismissTip() }
+                        )
+                    }
                 }
 
                 // Energy bar

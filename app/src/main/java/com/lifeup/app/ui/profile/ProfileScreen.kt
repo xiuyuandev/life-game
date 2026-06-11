@@ -57,8 +57,11 @@ import com.lifeup.app.ui.theme.ThemeViewModel
 @Composable
 fun ProfileScreen(
     onNavigateToReview: () -> Unit,
+    onNavigateToStats: () -> Unit,
+    onNavigateToLedger: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToBackup: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
     themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
@@ -120,7 +123,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.ReceiptLong,
                         title = "时间账本",
-                        onClick = onNavigateToReview
+                        onClick = onNavigateToLedger
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ProfileMenuItem(
@@ -132,7 +135,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.QueryStats,
                         title = "技能统计报告",
-                        onClick = onNavigateToReview
+                        onClick = onNavigateToStats
                     )
                 }
             }
@@ -177,7 +180,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.Info,
                         title = "关于",
-                        onClick = { /* placeholder */ }
+                        onClick = onNavigateToAbout
                     )
                 }
             }

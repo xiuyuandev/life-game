@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/widget_background">
+
+    <!-- Skill Name -->
+    <TextView
+        android:id="@+id/widget_timer_skill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="未在计时"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="#333333"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical">
+
+        <!-- Elapsed Time -->
+        <TextView
+            android:id="@+id/widget_timer_elapsed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="00:00:00"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#FF6B35"
+            android:fontFamily="monospace" />
+
+        <!-- Running Indicator -->
+        <View
+            android:id="@+id/widget_timer_indicator"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/widget_indicator_dot" />
+    </LinearLayout>
+
+    <!-- Click hint -->
+    <TextView
+        android:id="@+id/widget_timer_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="点击打开计时器"
+        android:textSize="10sp"
+        android:textColor="#999999" />
+
+</LinearLayout>

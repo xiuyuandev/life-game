@@ -3,9 +3,11 @@ package com.lifeup.app.ui.today
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifeup.app.data.db.Priority
+import com.lifeup.app.data.preferences.SettingsPrefs
 import com.lifeup.app.domain.model.DailyState
 import com.lifeup.app.domain.model.Todo
 import com.lifeup.app.domain.repository.DailyStateRepository
+import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TimeRecordRepository
 import com.lifeup.app.domain.repository.TodoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,14 +30,17 @@ data class TodayUiState(
     val energyCap: Float = 100f,
     val streakCount: Int = 0,
     val todayDate: String = "",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val tip: TipContent? = null
 )
 
 @HiltViewModel
 class TodayViewModel @Inject constructor(
     private val todoRepository: TodoRepository,
     private val dailyStateRepository: DailyStateRepository,
-    private val timeRecordRepository: TimeRecordRepository
+    private val timeRecordRepository: TimeRecordRepository,
+    private val skillRepository: SkillRepository,
+    private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodayUiState())
@@ -46,6 +51,50 @@ class TodayViewModel @Inject constructor(
 
     init {
         loadTodayData()
+        loadTip()
+    }
+
+    private fun loadTip() {
+        viewModelScope.launch {
+            val earliestCreatedAt = skillRepository.getEarliestCreatedAt()
+            if (earliestCreatedAt == null || earliestCreatedAt == 0L) {
+                _uiState.update { it.copy(tip = null) }
+                return@launch
+            }
+
+            val daysSinceStart = ((System.currentTimeMillis() - earliestCreatedAt) / (24 * 60 * 60 * 1000)).toInt() + 1
+            val dismissedTips = settingsPrefs.getDismissedTips().first()
+
+            val tip = when {
+                daysSinceStart in 1..2 -> TipContent(
+                    id = "tip_day_1_2",
+                    title = "新手提示",
+                    message = "试试开始计时吧！投资性时间会为你带来经验和金币"
+                )
+                daysSinceStart in 3..4 -> TipContent(
+                    id = "tip_day_3_4",
+                    title = "技能组合",
+                    message = "创建更多技能来解锁组合加成！跨分类技能组合可获得额外经验"
+                )
+                daysSinceStart in 5..7 -> TipContent(
+                    id = "tip_day_5_7",
+                    title = "坚持就是胜利",
+                    message = "坚持打卡可以获得连续天数加成，每天首次计时还有额外奖励"
+                )
+                else -> null
+            }
+
+            val finalTip = if (tip != null && tip.id !in dismissedTips) tip else null
+            _uiState.update { it.copy(tip = finalTip) }
+        }
+    }
+
+    fun dismissTip() {
+        val tipId = _uiState.value.tip?.id ?: return
+        viewModelScope.launch {
+            settingsPrefs.dismissTip(tipId)
+            _uiState.update { it.copy(tip = null) }
+        }
     }
 
     private fun loadTodayData() {

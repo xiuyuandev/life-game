@@ -1,5 +1,9 @@
 package com.lifeup.app.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -8,9 +12,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.lifeup.app.ui.achievement.AchievementScreen
+import com.lifeup.app.ui.about.AboutScreen
+import com.lifeup.app.ui.about.PrivacyPolicyScreen
 import com.lifeup.app.ui.backup.BackupScreen
 import com.lifeup.app.ui.character.CharacterScreen
 import com.lifeup.app.ui.combo.ComboScreen
+import com.lifeup.app.ui.ledger.LedgerScreen
 import com.lifeup.app.ui.onboarding.OnboardingScreen
 import com.lifeup.app.ui.profile.ProfileScreen
 import com.lifeup.app.ui.retroactive.RetroactiveScreen
@@ -20,6 +27,7 @@ import com.lifeup.app.ui.showcase.ShowcaseScreen
 import com.lifeup.app.ui.skills.CreateSkillScreen
 import com.lifeup.app.ui.skills.SkillDetailScreen
 import com.lifeup.app.ui.skills.SkillsScreen
+import com.lifeup.app.ui.stats.StatsScreen
 import com.lifeup.app.ui.timer.TimerScreen
 import com.lifeup.app.ui.today.TodayScreen
 
@@ -32,9 +40,39 @@ fun LifeUpNavGraph(
     NavHost(
         navController = navController,
         startDestination = startDestination,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Left,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        },
+        popEnterTransition = {
+            slideIntoContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Right,
+                animationSpec = tween(300)
+            ) + fadeOut(animationSpec = tween(300))
+        }
     ) {
-        composable(Screen.Today.route) {
+        composable(
+            Screen.Today.route,
+            enterTransition = { fadeIn(animationSpec = tween(250)) },
+            exitTransition = { fadeOut(animationSpec = tween(250)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
+            popExitTransition = { fadeOut(animationSpec = tween(250)) }
+        ) {
             TodayScreen(
                 onNavigateToTimer = { skillId ->
                     navController.navigate(Screen.Timer.createRoute(skillId))
@@ -48,7 +86,13 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(Screen.Skills.route) {
+        composable(
+            Screen.Skills.route,
+            enterTransition = { fadeIn(animationSpec = tween(250)) },
+            exitTransition = { fadeOut(animationSpec = tween(250)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
+            popExitTransition = { fadeOut(animationSpec = tween(250)) }
+        ) {
             SkillsScreen(
                 onNavigateToDetail = { skillId ->
                     navController.navigate(Screen.SkillDetail.createRoute(skillId))
@@ -90,7 +134,13 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(Screen.Character.route) {
+        composable(
+            Screen.Character.route,
+            enterTransition = { fadeIn(animationSpec = tween(250)) },
+            exitTransition = { fadeOut(animationSpec = tween(250)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
+            popExitTransition = { fadeOut(animationSpec = tween(250)) }
+        ) {
             CharacterScreen(
                 onNavigateToAchievement = {
                     navController.navigate(Screen.Achievement.route)
@@ -101,16 +151,37 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(Screen.Profile.route) {
+        composable(
+            Screen.Profile.route,
+            enterTransition = { fadeIn(animationSpec = tween(250)) },
+            exitTransition = { fadeOut(animationSpec = tween(250)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
+            popExitTransition = { fadeOut(animationSpec = tween(250)) }
+        ) {
             ProfileScreen(
                 onNavigateToReview = { navController.navigate(Screen.Review.route) },
+                onNavigateToStats = { navController.navigate(Screen.Stats.route) },
+                onNavigateToLedger = { navController.navigate(Screen.Ledger.route) },
                 onNavigateToSettings = { /* placeholder */ },
-                onNavigateToBackup = { navController.navigate(Screen.Backup.route) }
+                onNavigateToBackup = { navController.navigate(Screen.Backup.route) },
+                onNavigateToAbout = { navController.navigate(Screen.About.route) }
             )
         }
 
         composable(Screen.Review.route) {
             ReviewScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Stats.route) {
+            StatsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Ledger.route) {
+            LedgerScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -179,6 +250,19 @@ fun LifeUpNavGraph(
 
         composable(Screen.Backup.route) {
             BackupScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.About.route) {
+            AboutScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) }
+            )
+        }
+
+        composable(Screen.PrivacyPolicy.route) {
+            PrivacyPolicyScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -19,5 +19,9 @@ sealed class Screen(val route: String, val title: String) {
     data object Shop : Screen("shop", "金币商店")
     data object Combo : Screen("combo", "技能组合")
     data object Showcase : Screen("showcase", "技能图鉴")
+    data object Stats : Screen("stats", "技能统计")
+    data object Ledger : Screen("ledger", "时间账本")
     data object Backup : Screen("backup", "数据管理")
+    data object About : Screen("about", "关于")
+    data object PrivacyPolicy : Screen("privacy_policy", "隐私政策")
 }

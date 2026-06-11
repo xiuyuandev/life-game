@@ -19,4 +19,6 @@ interface SkillRepository {
     suspend fun deleteSkill(skill: Skill)
 
     suspend fun getActiveSkillCount(): Int
+
+    suspend fun getEarliestCreatedAt(): Long?
 }

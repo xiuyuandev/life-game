@@ -44,6 +44,10 @@ class SkillRepositoryImpl @Inject constructor(
     override suspend fun getActiveSkillCount(): Int {
         return skillDao.getActiveCount()
     }
+
+    override suspend fun getEarliestCreatedAt(): Long? {
+        return skillDao.getEarliestCreatedAt()
+    }
 }
 
 fun SkillEntity.toDomain(): Skill {

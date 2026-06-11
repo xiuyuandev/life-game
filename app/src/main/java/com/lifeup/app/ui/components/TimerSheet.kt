@@ -35,6 +35,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,14 +116,19 @@ fun TimerSheet(
                     lineHeight = 64.sp
                 ),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.semantics {
+                    contentDescription = "计时: ${timerManager.formatElapsedTime(elapsedSeconds)}"
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // Record type toggle
             SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "记录类型: ${if (recordTypeIndex == 0) "投资性" else "消耗性"}" }
             ) {
                 SegmentedButton(
                     selected = recordTypeIndex == 0,
