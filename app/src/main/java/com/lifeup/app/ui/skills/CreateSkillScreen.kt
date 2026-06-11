@@ -169,14 +169,31 @@ fun CreateSkillScreen(
             // Skill name
             OutlinedTextField(
                 value = uiState.name,
-                onValueChange = { viewModel.updateName(it) },
+                onValueChange = { if (it.length <= 20) viewModel.updateName(it) },
                 label = { Text("技能名称 *") },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(nameFocusRequester),
                 shape = RoundedCornerShape(12.dp),
-                isError = uiState.errorMessage != null && uiState.name.isBlank(),
+                isError = uiState.nameValidationError != null,
+                supportingText = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = uiState.nameValidationError ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "${uiState.name.length}/20",
+                            color = if (uiState.name.length >= 20) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                },
                 keyboardOptions = doneKeyboardOptions(),
                 keyboardActions = doneKeyboardActions(focusManager) {
                     if (uiState.canCreate) {

@@ -224,7 +224,23 @@ fun TodayScreen(
 
                 if (uiState.habits.isEmpty()) {
                     item {
-                        EmptyStateMessage(text = "还没有习惯，添加一个吧", icon = "🌱")
+                        EmptyState(
+                            title = "还没有习惯",
+                            message = "每天完成习惯可以获得能量和金币奖励",
+                            icon = "🌱",
+                            modifier = Modifier.fillMaxWidth(),
+                            action = {
+                                Button(
+                                    onClick = {
+                                        addAsHabit = true
+                                        showAddDialog = true
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("添加习惯")
+                                }
+                            }
+                        )
                     }
                 } else {
                     items(
@@ -277,7 +293,23 @@ fun TodayScreen(
 
                 if (uiState.todos.isEmpty()) {
                     item {
-                        EmptyStateMessage(text = "今天没有待办", icon = "✨")
+                        EmptyState(
+                            title = "今天没有待办",
+                            message = "添加待办事项来规划你的一天",
+                            icon = "✨",
+                            modifier = Modifier.fillMaxWidth(),
+                            action = {
+                                Button(
+                                    onClick = {
+                                        addAsHabit = false
+                                        showAddDialog = true
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("添加待办")
+                                }
+                            }
+                        )
                     }
                 } else {
                     items(

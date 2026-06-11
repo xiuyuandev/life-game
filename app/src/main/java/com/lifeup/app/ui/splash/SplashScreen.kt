@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,10 +40,15 @@ fun SplashScreen(
         animationSpec = tween(durationMillis = 800),
         label = "splashAlpha"
     )
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (startAnimation) 1f else 0.8f,
+        animationSpec = tween(durationMillis = 800),
+        label = "splashScale"
+    )
 
     LaunchedEffect(Unit) {
         startAnimation = true
-        delay(1500)
+        delay(1800)
         onSplashComplete()
     }
 
@@ -54,27 +60,35 @@ fun SplashScreen(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.alpha(alphaAnim)
+            modifier = Modifier
+                .alpha(alphaAnim)
+                .scale(scaleAnim)
         ) {
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
                 contentDescription = null,
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier.size(96.dp),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
                 text = "LifeUp",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                fontSize = 36.sp
+                fontSize = 40.sp
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "人生升级",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "用游戏化驱动真实成长",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
     }

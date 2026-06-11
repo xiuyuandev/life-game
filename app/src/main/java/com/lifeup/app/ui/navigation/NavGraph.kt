@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -38,19 +40,31 @@ fun LifeUpNavGraph(
     startDestination: String,
     modifier: Modifier = Modifier
 ) {
-    val enterTransition = fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+    val enterTransition = fadeIn(animationSpec = tween(250)) + scaleIn(
+        initialScale = 0.95f,
+        animationSpec = tween(250)
+    ) + slideIntoContainer(
         AnimatedContentTransitionScope.SlideDirection.Start,
         animationSpec = tween(300)
     )
-    val exitTransition = fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+    val exitTransition = fadeOut(animationSpec = tween(200)) + scaleOut(
+        targetScale = 0.95f,
+        animationSpec = tween(200)
+    ) + slideOutOfContainer(
         AnimatedContentTransitionScope.SlideDirection.Start,
         animationSpec = tween(300)
     )
-    val popEnterTransition = fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+    val popEnterTransition = fadeIn(animationSpec = tween(250)) + scaleIn(
+        initialScale = 0.95f,
+        animationSpec = tween(250)
+    ) + slideIntoContainer(
         AnimatedContentTransitionScope.SlideDirection.End,
         animationSpec = tween(300)
     )
-    val popExitTransition = fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+    val popExitTransition = fadeOut(animationSpec = tween(200)) + scaleOut(
+        targetScale = 0.95f,
+        animationSpec = tween(200)
+    ) + slideOutOfContainer(
         AnimatedContentTransitionScope.SlideDirection.End,
         animationSpec = tween(300)
     )

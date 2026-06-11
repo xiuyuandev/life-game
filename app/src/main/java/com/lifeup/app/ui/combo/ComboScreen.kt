@@ -38,6 +38,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.lifeup.app.ui.components.EmptyState
 import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -111,18 +112,23 @@ fun ComboScreen(
 
         if (uiState.combos.isEmpty()) {
             item {
-                Box(
+                EmptyState(
+                    title = "还没有组合",
+                    message = "将两个不同分类的技能组合起来，获得额外经验加成",
+                    icon = "🔗",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "🔗 还没有组合，从推荐中创建吧",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                }
+                        .padding(vertical = 24.dp),
+                    action = {
+                        if (uiState.recommendedCombos.isNotEmpty()) {
+                            Text(
+                                text = "👇 从下方推荐中选择一个创建",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
             }
         } else {
             items(

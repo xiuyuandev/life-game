@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Inbox
@@ -25,7 +26,8 @@ fun EmptyState(
     title: String,
     message: String = "",
     icon: String = "",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    action: @Composable (() -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -35,23 +37,28 @@ fun EmptyState(
         verticalArrangement = Arrangement.Center
     ) {
         if (icon.isNotEmpty()) {
-            Text(text = icon, style = MaterialTheme.typography.displaySmall)
-            Spacer(modifier = Modifier.height(12.dp))
+            Text(text = icon, style = MaterialTheme.typography.displayLarge)
+            Spacer(modifier = Modifier.height(16.dp))
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
         if (message.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
+        }
+        if (action != null) {
+            Spacer(modifier = Modifier.height(16.dp))
+            action()
         }
     }
 }
@@ -72,25 +79,29 @@ fun ErrorState(
         Icon(
             imageVector = Icons.Default.CloudOff,
             contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = "加载失败",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text = "出错了",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onRetry) {
-            Text("重试")
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = onRetry,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("重新加载")
         }
     }
 }
