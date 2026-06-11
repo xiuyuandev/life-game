@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">人生升级</string>
+    <string name="tab_today">今日</string>
+    <string name="tab_skills">技能</string>
+    <string name="tab_character">角色馆</string>
+    <string name="tab_profile">我的</string>
+    <string name="screen_skill_detail">技能详情</string>
+    <string name="screen_create_skill">创建技能</string>
+    <string name="screen_review">回顾</string>
+    <string name="screen_onboarding">引导</string>
+    <string name="screen_timer">计时器</string>
+</resources>

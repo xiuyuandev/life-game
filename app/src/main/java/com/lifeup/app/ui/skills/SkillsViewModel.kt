@@ -1,0 +1,86 @@
+package com.lifeup.app.ui.skills
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.lifeup.app.data.db.SkillStatus
+import com.lifeup.app.domain.model.Skill
+import com.lifeup.app.domain.repository.ComboRepository
+import com.lifeup.app.domain.repository.DailyStateRepository
+import com.lifeup.app.domain.repository.ItemRepository
+import com.lifeup.app.domain.repository.SkillRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import javax.inject.Inject
+
+data class SkillsUiState(
+    val skills: List<Skill> = emptyList(),
+    val isLoading: Boolean = true,
+    val energy: Float = 0f,
+    val energyCap: Float = 100f
+)
+
+@HiltViewModel
+class SkillsViewModel @Inject constructor(
+    private val skillRepository: SkillRepository,
+    private val comboRepository: ComboRepository,
+    private val itemRepository: ItemRepository,
+    private val dailyStateRepository: DailyStateRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(SkillsUiState())
+    val uiState: StateFlow<SkillsUiState> = _uiState.asStateFlow()
+
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+    init {
+        loadActiveSkills()
+        loadEnergy()
+    }
+
+    private fun loadActiveSkills() {
+        viewModelScope.launch {
+            skillRepository.getActiveSkills().collect { skills ->
+                _uiState.update { it.copy(skills = skills, isLoading = false) }
+            }
+        }
+    }
+
+    private fun loadEnergy() {
+        viewModelScope.launch {
+            val todayStr = dateFormat.format(Date())
+            dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
+                val state = dailyState ?: return@collect
+                _uiState.update { it.copy(energy = state.energy, energyCap = state.energyCap) }
+            }
+        }
+    }
+
+    fun pauseSkill(id: Long) {
+        viewModelScope.launch {
+            val skill = skillRepository.getSkillById(id) ?: return@launch
+            skillRepository.updateSkill(skill.copy(status = SkillStatus.PAUSED))
+        }
+    }
+
+    fun archiveSkill(id: Long) {
+        viewModelScope.launch {
+            val skill = skillRepository.getSkillById(id) ?: return@launch
+            skillRepository.updateSkill(skill.copy(status = SkillStatus.ARCHIVED))
+        }
+    }
+
+    fun resumeSkill(id: Long) {
+        viewModelScope.launch {
+            val skill = skillRepository.getSkillById(id) ?: return@launch
+            skillRepository.updateSkill(skill.copy(status = SkillStatus.ACTIVE))
+        }
+    }
+}
