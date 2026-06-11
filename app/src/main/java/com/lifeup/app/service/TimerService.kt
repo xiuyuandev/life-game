@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
 class TimerService : Service() {
 
     companion object {
-        const val CHANNEL_ID = "lifeup_timer"
+        const val CHANNEL_ID = NotificationHelper.CHANNEL_ID_TIMER
         const val NOTIFICATION_ID = 1001
 
         const val ACTION_START = "com.lifeup.app.action.TIMER_START"
@@ -232,17 +232,7 @@ class TimerService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "计时器",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "技能练习计时器通知"
-                setShowBadge(false)
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
+        // Channels are created in LifeUpApplication via NotificationHelper
     }
 
     private fun formatElapsedTime(seconds: Long): String {

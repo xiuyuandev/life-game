@@ -8,6 +8,7 @@ import com.lifeup.app.data.preferences.OutfitPreset
 import com.lifeup.app.data.preferences.SettingsPrefs
 import com.lifeup.app.domain.calculator.AttributeCalculator
 import com.lifeup.app.domain.model.Item
+import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
 import com.lifeup.app.domain.repository.ItemRepository
@@ -40,6 +41,7 @@ class CharacterViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val comboRepository: ComboRepository,
     private val dailyStateRepository: DailyStateRepository,
+    private val characterStateRepository: CharacterStateRepository,
     private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
@@ -53,26 +55,18 @@ class CharacterViewModel @Inject constructor(
     private fun loadCharacterData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
+            characterStateRepository.initializeIfNeeded()
 
             combine(
+                characterStateRepository.getCharacterState(),
                 skillRepository.getActiveSkills(),
                 itemRepository.getEquippedItems(),
                 itemRepository.getUnlockedItems(),
-                comboRepository.getActiveCombos(),
                 settingsPrefs.getOutfitPresets()
-            ) { skills, equippedItems, unlockedItems, _, presets ->
-                val totalMinutes = skills.sumOf { it.totalMinutes }
-                val totalExp = totalMinutes * 10L
-                val characterLevel = AttributeCalculator.calculateCharacterLevel(totalExp).coerceAtLeast(1)
-
+            ) { characterState, skills, equippedItems, unlockedItems, presets ->
                 val attributes = calculateAttributes(skills, equippedItems)
-
                 val backpackItems = unlockedItems.filter { !it.isEquipped }
-
-                val title = deriveTitle(characterLevel)
-
                 val totalAttributeBonus = equippedItems.sumOf { it.attributeBonus }
-
                 val outfitName = if (equippedItems.isNotEmpty()) {
                     equippedItems.joinToString(" + ") { it.name }
                 } else {
@@ -81,12 +75,12 @@ class CharacterViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
-                        characterLevel = characterLevel,
-                        totalExp = totalExp,
+                        characterLevel = characterState.characterLevel,
+                        totalExp = characterState.totalExp,
                         attributes = attributes,
                         equippedItems = equippedItems,
                         backpackItems = backpackItems,
-                        title = title,
+                        title = characterState.title,
                         isLoading = false,
                         outfitPresets = presets,
                         totalAttributeBonus = totalAttributeBonus,
@@ -120,17 +114,6 @@ class CharacterViewModel @Inject constructor(
             "ENDURANCE" to endurance,
             "LUCK" to luck
         )
-    }
-
-    private fun deriveTitle(level: Int): String {
-        return when {
-            level >= 20 -> "传奇大师"
-            level >= 15 -> "宗师"
-            level >= 10 -> "专家"
-            level >= 5 -> "熟练者"
-            level >= 3 -> "学徒"
-            else -> "初学者"
-        }
     }
 
     fun equipItem(item: Item) {
@@ -175,13 +158,11 @@ class CharacterViewModel @Inject constructor(
 
     fun applyPreset(preset: OutfitPreset) {
         viewModelScope.launch {
-            // Unequip all current items first
             _uiState.value.equippedItems.forEach { item ->
                 val updated = item.copy(isEquipped = false, equippedSlot = null)
                 itemRepository.updateItem(updated)
             }
 
-            // Find and equip preset items from unlocked items
             val allItems = _uiState.value.equippedItems + _uiState.value.backpackItems
             val slotItemIdMap = mapOf(
                 SlotType.HEAD to preset.headItemId,

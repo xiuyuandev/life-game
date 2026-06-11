@@ -90,7 +90,17 @@ class TimerViewModel @Inject constructor(
 
     fun startTimer() {
         val skill = _uiState.value.skill ?: return
-        timerManager.startTimer(application, skill.id, skill.name)
+        viewModelScope.launch {
+            val todayStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
+            val durationMinutes = 25 // default focus session length
+            val energyCost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
+            if ((dailyState?.energy ?: 0f) < energyCost) {
+                _uiState.update { it.copy(error = "能量不足，需要 $energyCost 能量") }
+                return@launch
+            }
+            timerManager.startTimer(application, skill.id, skill.name)
+        }
     }
 
     fun stopTimer() {

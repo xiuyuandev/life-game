@@ -50,6 +50,16 @@ object GameEngine {
         val skill = skillRepository.getSkillById(skillId)
             ?: throw IllegalArgumentException("Skill not found: $skillId")
 
+        val today = LocalDate.now().format(dateFormatter)
+        val dailyState = dailyStateRepository.getStateByDate(today).first()
+            ?: DailyState(date = today)
+
+        // Calculate energy cost and validate
+        val energyCost = durationMinutes.coerceAtMost(20).coerceAtLeast(5)
+        if (dailyState.energy < energyCost) {
+            throw IllegalStateException("能量不足，需要 $energyCost 能量，当前 ${dailyState.energy.toInt()}")
+        }
+
         // a. Create a TimeRecord
         val record = TimeRecord(
             skillId = skillId,
@@ -72,18 +82,12 @@ object GameEngine {
         val leveledUp = leveledSkill.level > skill.level
         skillRepository.updateSkill(leveledSkill)
 
-        // c2. Persist character exp and time
-        characterStateRepository.addExp(expGained)
-        characterStateRepository.addTime(durationMinutes)
-
         // d. Calculate exp using ExpCalculator
-        val today = LocalDate.now().format(dateFormatter)
-        val dailyState = dailyStateRepository.getStateByDate(today).first()
         val equippedItems = itemRepository.getEquippedItems().first()
         val activeCombos = comboRepository.getActiveCombos().first()
-        val streakDays = dailyState?.streakCount ?: 0
-        val isFirstTimerToday = dailyState?.isFirstTimerUsed ?: false
-        val dailyInvestmentMinutes = dailyState?.investmentMinutes ?: 0
+        val streakDays = dailyState.streakCount
+        val isFirstTimerToday = dailyState.isFirstTimerUsed
+        val dailyInvestmentMinutes = dailyState.investmentMinutes
 
         val expGained = ExpCalculator.calculateExp(
             baseMinutes = durationMinutes,
@@ -95,6 +99,10 @@ object GameEngine {
             dailyInvestmentMinutes = dailyInvestmentMinutes
         )
 
+        // c2. Persist character exp and time
+        characterStateRepository.addExp(expGained)
+        characterStateRepository.addTime(durationMinutes)
+
         // e. Calculate gold using GoldCalculator
         val goldGained = GoldCalculator.calculateGold(
             minutes = durationMinutes,
@@ -103,16 +111,17 @@ object GameEngine {
             skillLevel = leveledSkill.level
         )
 
-        // f. Update daily state (investment/consumption minutes)
-        val currentDailyState = dailyState ?: DailyState(date = today)
+        // f. Update daily state (investment/consumption minutes + energy)
         val updatedDailyState = when (recordType) {
-            RecordType.INVESTMENT -> currentDailyState.copy(
-                investmentMinutes = currentDailyState.investmentMinutes + durationMinutes,
-                goldEarned = currentDailyState.goldEarned + goldGained
+            RecordType.INVESTMENT -> dailyState.copy(
+                investmentMinutes = dailyState.investmentMinutes + durationMinutes,
+                goldEarned = dailyState.goldEarned + goldGained,
+                energy = dailyState.energy - energyCost
             )
-            RecordType.CONSUMPTION -> currentDailyState.copy(
-                consumptionMinutes = currentDailyState.consumptionMinutes + durationMinutes,
-                goldEarned = currentDailyState.goldEarned + goldGained
+            RecordType.CONSUMPTION -> dailyState.copy(
+                consumptionMinutes = dailyState.consumptionMinutes + durationMinutes,
+                goldEarned = dailyState.goldEarned + goldGained,
+                energy = dailyState.energy - energyCost
             )
         }
         dailyStateRepository.insertOrUpdateState(updatedDailyState)
@@ -123,6 +132,18 @@ object GameEngine {
             checkAndUnlockItems(leveledSkill, itemRepository)
         } else {
             emptyList()
+        }
+
+        // g2. Check achievements
+        val totalRecords = timeRecordRepository.getRecordsByDateRange(0, Long.MAX_VALUE).first().size
+        if (totalRecords == 1) {
+            achievementRepository.unlockAchievement("first_skill")
+        }
+        if (leveledSkill.level >= 5) {
+            achievementRepository.unlockAchievement("skill_level_5")
+        }
+        if (leveledSkill.level >= 10) {
+            achievementRepository.unlockAchievement("skill_level_10")
         }
 
         // h. Return TimerResult with all gains

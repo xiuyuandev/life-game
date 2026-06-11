@@ -76,6 +76,12 @@ class SettingsPrefs @Inject constructor(
         }
     }
 
+    suspend fun resetFirstTimerUsedToday() {
+        dataStore.edit { preferences ->
+            preferences[Keys.FIRST_TIMER_USED_TODAY] = false
+        }
+    }
+
     fun getOutfitPresets(): Flow<List<OutfitPreset>> {
         return dataStore.data.map { preferences ->
             val jsonString = preferences[Keys.OUTFIT_PRESETS] ?: "[]"

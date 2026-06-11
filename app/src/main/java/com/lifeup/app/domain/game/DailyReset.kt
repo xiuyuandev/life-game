@@ -1,5 +1,6 @@
 package com.lifeup.app.domain.game
 
+import com.lifeup.app.data.preferences.SettingsPrefs
 import com.lifeup.app.domain.model.DailyState
 import com.lifeup.app.domain.model.Todo
 import com.lifeup.app.domain.repository.DailyStateRepository
@@ -14,7 +15,8 @@ object DailyReset {
 
     suspend fun performReset(
         dailyStateRepository: DailyStateRepository,
-        todoRepository: TodoRepository
+        todoRepository: TodoRepository,
+        settingsPrefs: SettingsPrefs
     ) {
         val today = LocalDate.now().format(dateFormatter)
         val yesterday = LocalDate.now().minusDays(1).format(dateFormatter)
@@ -50,6 +52,9 @@ object DailyReset {
             )
             dailyStateRepository.insertOrUpdateState(newDailyState)
         }
+
+        // Reset SettingsPrefs first timer flag
+        settingsPrefs.resetFirstTimerUsedToday()
     }
 
     private suspend fun calculateStreak(

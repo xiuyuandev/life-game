@@ -53,6 +53,10 @@
                 android:resource="@xml/timer_widget_info" />
         </receiver>
 
+        <service
+            android:name=".widget.WidgetUpdateService"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -80,6 +80,12 @@ fun BackupScreen(
         }
     }
 
+    val createDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportJsonToUri(context, it) }
+    }
+
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
             snackbarHostState.showSnackbar(it)
@@ -139,7 +145,7 @@ fun BackupScreen(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.exportJson() },
+                            onClick = { createDocumentLauncher.launch("lifeup_backup.json") },
                             enabled = !uiState.isExporting,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)

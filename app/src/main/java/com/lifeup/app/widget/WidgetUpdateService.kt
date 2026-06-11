@@ -19,9 +19,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-object WidgetUpdateService {
+class WidgetUpdateService : android.app.Service() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun getTodayDate(): String {
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
@@ -42,7 +42,7 @@ object WidgetUpdateService {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        scope.launch {
+        serviceScope.launch {
             val db = LifeUpDatabase.getDatabase(context)
             val today = getTodayDate()
 
@@ -197,40 +197,52 @@ object WidgetUpdateService {
         }
     }
 
-    fun scheduleTimerWidgetUpdates(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, TimerWidget::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            2,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+    override fun onBind(intent: android.content.Intent?): android.os.IBinder? = null
 
-        // Update every second
-        val intervalMillis = 1000L
-
-        alarmManager.setRepeating(
-            AlarmManager.ELAPSED_REALTIME,
-            android.os.SystemClock.elapsedRealtime() + intervalMillis,
-            intervalMillis,
-            pendingIntent
-        )
+    override fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int {
+        return START_NOT_STICKY
     }
 
-    fun cancelTimerWidgetUpdates(context: Context) {
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, TimerWidget::class.java).apply {
-            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-        }
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            2,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        alarmManager.cancel(pendingIntent)
+    override fun onDestroy() {
+        serviceScope.cancel()
+        super.onDestroy()
     }
-}
+
+    companion object {
+        fun scheduleTimerWidgetUpdates(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val intent = Intent(context, TimerWidget::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                2,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            // Update every second
+            val intervalMillis = 1000L
+
+            alarmManager.setRepeating(
+                AlarmManager.ELAPSED_REALTIME,
+                android.os.SystemClock.elapsedRealtime() + intervalMillis,
+                intervalMillis,
+                pendingIntent
+            )
+        }
+
+        fun cancelTimerWidgetUpdates(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val intent = Intent(context, TimerWidget::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                2,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(pendingIntent)
+        }
+    }

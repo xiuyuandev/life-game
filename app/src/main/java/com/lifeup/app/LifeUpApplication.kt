@@ -8,6 +8,7 @@ import dagger.hilt.android.HiltAndroidApp
 class LifeUpApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        NotificationHelper.createNotificationChannels(this)
         DailyResetWorker.schedule(this)
     }
 }

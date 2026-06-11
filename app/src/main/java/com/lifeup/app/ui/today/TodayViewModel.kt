@@ -117,28 +117,28 @@ class TodayViewModel @Inject constructor(
                 )
                 Triple(habits, todos, state)
             }.collect { (habits, todos, dailyState) ->
-                val calculatedEnergy = calculateEnergy(habits, todos)
                 val streak = dailyStateRepository.getLatestStreak() ?: dailyState.streakCount
 
                 _uiState.update { currentState ->
                     currentState.copy(
                         habits = habits,
                         todos = todos,
-                        energy = calculatedEnergy,
+                        energy = dailyState.energy,
                         energyCap = dailyState.energyCap,
                         streakCount = streak,
                         isLoading = false
                     )
                 }
 
-                // Persist updated energy to DailyState
-                if (dailyState.energy != calculatedEnergy || dailyState.streakCount != streak) {
+                // Persist counts to DailyState if out of sync
+                val habitsCompleted = habits.count { it.isCompleted }
+                val todosCompleted = todos.count { it.isCompleted }
+                if (dailyState.habitsCompleted != habitsCompleted || dailyState.todosCompleted != todosCompleted || dailyState.streakCount != streak) {
                     dailyStateRepository.insertOrUpdateState(
                         dailyState.copy(
-                            energy = calculatedEnergy,
                             streakCount = streak,
-                            habitsCompleted = habits.count { it.isCompleted },
-                            todosCompleted = todos.count { it.isCompleted }
+                            habitsCompleted = habitsCompleted,
+                            todosCompleted = todosCompleted
                         )
                     )
                 }
@@ -172,6 +172,25 @@ class TodayViewModel @Inject constructor(
                 completedAt = if (!item.isCompleted) System.currentTimeMillis() else null
             )
             todoRepository.updateTodo(updated)
+
+            // Apply energy cost and gold reward on completion
+            if (!item.isCompleted) {
+                val todayStr = dateFormat.format(Date())
+                val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
+                val state = dailyState ?: DailyState(date = todayStr)
+
+                val energyCost = if (item.isHabit) 5f else 0f
+                val goldReward = 2
+
+                dailyStateRepository.insertOrUpdateState(
+                    state.copy(
+                        energy = (state.energy - energyCost).coerceAtLeast(0f),
+                        goldEarned = state.goldEarned + goldReward,
+                        habitsCompleted = state.habitsCompleted + if (item.isHabit) 1 else 0,
+                        todosCompleted = state.todosCompleted + if (!item.isHabit) 1 else 0
+                    )
+                )
+            }
         }
     }
 
