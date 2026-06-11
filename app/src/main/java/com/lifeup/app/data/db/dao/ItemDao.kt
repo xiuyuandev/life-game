@@ -31,4 +31,13 @@ interface ItemDao {
 
     @Query("SELECT * FROM items WHERE slot_type = :slotType")
     fun getBySlot(slotType: String): Flow<List<ItemEntity>>
+
+    @Query("SELECT * FROM items")
+    suspend fun getAllList(): List<ItemEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<ItemEntity>)
+
+    @Query("DELETE FROM items")
+    suspend fun deleteAll()
 }

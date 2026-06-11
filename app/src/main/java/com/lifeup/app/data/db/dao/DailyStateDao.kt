@@ -22,4 +22,13 @@ interface DailyStateDao {
 
     @Query("SELECT streak_count FROM daily_states ORDER BY date DESC LIMIT 1")
     suspend fun getLatestStreak(): Int?
+
+    @Query("SELECT * FROM daily_states")
+    suspend fun getAll(): List<DailyStateEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<DailyStateEntity>)
+
+    @Query("DELETE FROM daily_states")
+    suspend fun deleteAll()
 }

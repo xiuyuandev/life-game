@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface ComboRepository {
 
+    fun getAll(): Flow<List<Combo>>
+
     fun getActiveCombos(): Flow<List<Combo>>
 
     suspend fun insertCombo(combo: Combo): Long

@@ -14,6 +14,10 @@ class ComboRepositoryImpl @Inject constructor(
     private val comboDao: ComboDao
 ) : ComboRepository {
 
+    override fun getAll(): Flow<List<Combo>> {
+        return comboDao.getAll().map { list -> list.map { it.toDomain() } }
+    }
+
     override fun getActiveCombos(): Flow<List<Combo>> {
         return comboDao.getActive().map { list -> list.map { it.toDomain() } }
     }

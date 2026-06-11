@@ -57,6 +57,7 @@ import com.lifeup.app.ui.components.TodoItem
 fun TodayScreen(
     onNavigateToTimer: (Long) -> Unit,
     onNavigateToCreateSkill: () -> Unit,
+    onNavigateToRetroactive: () -> Unit = {},
     viewModel: TodayViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -183,7 +184,7 @@ fun TodayScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     QuickActionsRow(
-                        onRetroactiveClick = { /* TODO: Navigate to retroactive entry */ },
+                        onRetroactiveClick = onNavigateToRetroactive,
                         onStartTimerClick = { onNavigateToTimer(0L) }
                     )
                 }

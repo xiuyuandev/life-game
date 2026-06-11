@@ -29,4 +29,13 @@ interface ComboDao {
 
     @Delete
     suspend fun delete(combo: ComboEntity)
+
+    @Query("SELECT * FROM combos")
+    suspend fun getAllList(): List<ComboEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<ComboEntity>)
+
+    @Query("DELETE FROM combos")
+    suspend fun deleteAll()
 }

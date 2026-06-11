@@ -1,6 +1,5 @@
 package com.lifeup.app.ui.navigation
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -8,12 +7,20 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.lifeup.app.ui.achievement.AchievementScreen
+import com.lifeup.app.ui.backup.BackupScreen
 import com.lifeup.app.ui.character.CharacterScreen
+import com.lifeup.app.ui.combo.ComboScreen
 import com.lifeup.app.ui.onboarding.OnboardingScreen
 import com.lifeup.app.ui.profile.ProfileScreen
+import com.lifeup.app.ui.retroactive.RetroactiveScreen
+import com.lifeup.app.ui.review.ReviewScreen
+import com.lifeup.app.ui.shop.ShopScreen
+import com.lifeup.app.ui.showcase.ShowcaseScreen
 import com.lifeup.app.ui.skills.CreateSkillScreen
 import com.lifeup.app.ui.skills.SkillDetailScreen
 import com.lifeup.app.ui.skills.SkillsScreen
+import com.lifeup.app.ui.timer.TimerScreen
 import com.lifeup.app.ui.today.TodayScreen
 
 @Composable
@@ -34,6 +41,9 @@ fun LifeUpNavGraph(
                 },
                 onNavigateToCreateSkill = {
                     navController.navigate(Screen.CreateSkill.route)
+                },
+                onNavigateToRetroactive = {
+                    navController.navigate(Screen.Retroactive.route)
                 }
             )
         }
@@ -48,6 +58,12 @@ fun LifeUpNavGraph(
                 },
                 onNavigateToTimer = { skillId ->
                     navController.navigate(Screen.Timer.createRoute(skillId))
+                },
+                onNavigateToCombo = {
+                    navController.navigate(Screen.Combo.route)
+                },
+                onNavigateToShowcase = {
+                    navController.navigate(Screen.Showcase.route)
                 }
             )
         }
@@ -75,18 +91,28 @@ fun LifeUpNavGraph(
         }
 
         composable(Screen.Character.route) {
-            CharacterScreen()
+            CharacterScreen(
+                onNavigateToAchievement = {
+                    navController.navigate(Screen.Achievement.route)
+                },
+                onNavigateToShop = {
+                    navController.navigate(Screen.Shop.route)
+                }
+            )
         }
 
         composable(Screen.Profile.route) {
             ProfileScreen(
                 onNavigateToReview = { navController.navigate(Screen.Review.route) },
-                onNavigateToSettings = { /* placeholder */ }
+                onNavigateToSettings = { /* placeholder */ },
+                onNavigateToBackup = { navController.navigate(Screen.Backup.route) }
             )
         }
 
         composable(Screen.Review.route) {
-            Text("回顾")
+            ReviewScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Onboarding.route) {
@@ -109,7 +135,52 @@ fun LifeUpNavGraph(
             )
         ) { backStackEntry ->
             val skillId = backStackEntry.arguments?.getLong("skillId") ?: 0L
-            Text("计时器 - 技能ID: $skillId")
+            TimerScreen(
+                skillId = skillId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Achievement.route) {
+            AchievementScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Retroactive.route) {
+            RetroactiveScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Shop.route) {
+            ShopScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Combo.route) {
+            ComboScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.Showcase.route) {
+            ShowcaseScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { skillId ->
+                    navController.navigate(Screen.SkillDetail.createRoute(skillId))
+                },
+                onNavigateToCreateSkill = {
+                    navController.navigate(Screen.CreateSkill.route)
+                }
+            )
+        }
+
+        composable(Screen.Backup.route) {
+            BackupScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

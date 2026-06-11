@@ -31,4 +31,13 @@ interface TimeRecordDao {
 
     @Query("SELECT * FROM time_records WHERE skill_id = :skillId ORDER BY created_at DESC LIMIT :limit")
     fun getRecentBySkill(skillId: Long, limit: Int = 10): Flow<List<TimeRecordEntity>>
+
+    @Query("SELECT * FROM time_records")
+    suspend fun getAll(): List<TimeRecordEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<TimeRecordEntity>)
+
+    @Query("DELETE FROM time_records")
+    suspend fun deleteAll()
 }

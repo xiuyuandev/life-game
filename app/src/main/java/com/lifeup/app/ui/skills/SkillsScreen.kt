@@ -3,20 +3,26 @@ package com.lifeup.app.ui.skills
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +41,8 @@ fun SkillsScreen(
     onNavigateToDetail: (Long) -> Unit,
     onNavigateToCreateSkill: () -> Unit,
     onNavigateToTimer: (Long) -> Unit,
+    onNavigateToCombo: () -> Unit = {},
+    onNavigateToShowcase: () -> Unit = {},
     viewModel: SkillsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,7 +81,12 @@ fun SkillsScreen(
             ) {
                 // Title + Energy bar
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                    SkillsTopBar(energy = uiState.energy, energyCap = uiState.energyCap)
+                    SkillsTopBar(
+                        energy = uiState.energy,
+                        energyCap = uiState.energyCap,
+                        onNavigateToCombo = onNavigateToCombo,
+                        onNavigateToShowcase = onNavigateToShowcase
+                    )
                 }
 
                 if (uiState.skills.isEmpty()) {
@@ -115,19 +128,49 @@ fun SkillsScreen(
 @Composable
 private fun SkillsTopBar(
     energy: Float,
-    energyCap: Float
+    energyCap: Float,
+    onNavigateToCombo: () -> Unit = {},
+    onNavigateToShowcase: () -> Unit = {}
 ) {
     androidx.compose.foundation.layout.Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
     ) {
-        Text(
-            text = "技能图鉴",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "技能图鉴",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Row {
+                OutlinedButton(onClick = onNavigateToShowcase) {
+                    Icon(
+                        imageVector = Icons.Default.CollectionsBookmark,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("图鉴")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                OutlinedButton(onClick = onNavigateToCombo) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("技能组合")
+                }
+            }
+        }
 
         Card(
             modifier = Modifier

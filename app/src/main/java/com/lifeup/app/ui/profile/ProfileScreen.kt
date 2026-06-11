@@ -1,6 +1,7 @@
 package com.lifeup.app.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +58,7 @@ import com.lifeup.app.ui.theme.ThemeViewModel
 fun ProfileScreen(
     onNavigateToReview: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToBackup: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
     themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
@@ -156,7 +158,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.CloudSync,
                         title = "数据同步",
-                        onClick = { /* placeholder */ }
+                        onClick = onNavigateToBackup
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ProfileMenuItem(
@@ -169,7 +171,7 @@ fun ProfileScreen(
                     ProfileMenuItem(
                         icon = Icons.Default.Sync,
                         title = "数据导出",
-                        onClick = { /* placeholder */ }
+                        onClick = onNavigateToBackup
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ProfileMenuItem(
@@ -362,7 +364,9 @@ private fun ProfileMenuItem(
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent
         ),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     )
 }
 

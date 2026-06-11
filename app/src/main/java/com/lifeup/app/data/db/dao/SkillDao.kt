@@ -35,4 +35,13 @@ interface SkillDao {
 
     @Query("SELECT COUNT(*) FROM skills WHERE status = 'ACTIVE'")
     suspend fun getActiveCount(): Int
+
+    @Query("SELECT * FROM skills")
+    suspend fun getAll(): List<SkillEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<SkillEntity>)
+
+    @Query("DELETE FROM skills")
+    suspend fun deleteAll()
 }
