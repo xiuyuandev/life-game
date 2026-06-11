@@ -32,6 +32,10 @@ class TimeRecordRepositoryImpl @Inject constructor(
         timeRecordDao.update(record.toEntity())
     }
 
+    override suspend fun deleteRecord(record: TimeRecord) {
+        timeRecordDao.delete(record.toEntity())
+    }
+
     override suspend fun getInvestmentMinutesByDate(date: String): Int {
         return timeRecordDao.getInvestmentMinutesByDate(date)
     }

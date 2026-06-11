@@ -113,4 +113,13 @@ class SkillsViewModel @Inject constructor(
             } catch (_: Exception) { }
         }
     }
+
+    fun deleteSkill(id: Long) {
+        viewModelScope.launch {
+            try {
+                val skill = skillRepository.getSkillById(id) ?: return@launch
+                skillRepository.deleteSkill(skill)
+            } catch (_: Exception) { }
+        }
+    }
 }

@@ -38,6 +38,12 @@ class TimerService : Service() {
 
         const val EXTRA_SKILL_ID = "skill_id"
         const val EXTRA_SKILL_NAME = "skill_name"
+
+        private const val PREFS_SKILL_ID = "skill_id"
+        private const val PREFS_SKILL_NAME = "skill_name"
+        private const val PREFS_START_TIME = "start_time"
+        private const val PREFS_IS_RUNNING = "is_running"
+        private const val PREFS_ELAPSED_SECONDS = "elapsed_seconds"
     }
 
     private val binder = TimerBinder()
@@ -68,14 +74,6 @@ class TimerService : Service() {
     }
 
     private val timerPrefs by lazy { getSharedPreferences("timer_state", Context.MODE_PRIVATE) }
-
-    companion object {
-        private const val PREFS_SKILL_ID = "skill_id"
-        private const val PREFS_SKILL_NAME = "skill_name"
-        private const val PREFS_START_TIME = "start_time"
-        private const val PREFS_IS_RUNNING = "is_running"
-        private const val PREFS_ELAPSED_SECONDS = "elapsed_seconds"
-    }
 
     inner class TimerBinder : Binder() {
         fun getService(): TimerService = this@TimerService
@@ -217,7 +215,7 @@ class TimerService : Service() {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_STOPWATCH
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
         } else {
             startForeground(NOTIFICATION_ID, notification)

@@ -1,6 +1,7 @@
 package com.lifeup.app.data.db.dao
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -25,6 +26,9 @@ interface TimeRecordDao {
 
     @Update
     suspend fun update(timeRecord: TimeRecordEntity)
+
+    @Delete
+    suspend fun delete(timeRecord: TimeRecordEntity)
 
     @Query("SELECT COALESCE(SUM(duration_minutes), 0) FROM time_records WHERE date(start_time / 1000, 'unixepoch') = :date AND record_type = 'INVESTMENT'")
     suspend fun getInvestmentMinutesByDate(date: String): Int

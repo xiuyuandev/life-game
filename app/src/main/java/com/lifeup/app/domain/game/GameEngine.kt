@@ -47,7 +47,8 @@ object GameEngine {
         comboRepository: ComboRepository,
         itemRepository: ItemRepository,
         characterStateRepository: CharacterStateRepository,
-        achievementRepository: AchievementRepository
+        achievementRepository: AchievementRepository,
+        goldRepository: com.lifeup.app.domain.repository.GoldRepository
     ): TimerResult {
         return try {
             // Input validation
@@ -151,18 +152,24 @@ object GameEngine {
                 emptyList()
             }
 
-            // g2. Check achievements
-            val totalRecords = withTimeout(5000) {
-                timeRecordRepository.getRecordsByDateRange(0, Long.MAX_VALUE).first().size
-            }
-            if (totalRecords == 1) {
-                achievementRepository.unlockAchievement("first_skill")
-            }
-            if (leveledSkill.level >= 5) {
-                achievementRepository.unlockAchievement("skill_level_5")
-            }
-            if (leveledSkill.level >= 10) {
-                achievementRepository.unlockAchievement("skill_level_10")
+            // g2. Check achievements using AchievementChecker
+            val allSkills = withTimeout(5000) { skillRepository.getActiveSkills().first() }
+            val allItems = withTimeout(5000) { itemRepository.getUnlockedItems().first() }
+            val allCombos = withTimeout(5000) { comboRepository.getActiveCombos().first() }
+            val characterState = withTimeout(5000) { characterStateRepository.getState().first() }
+            val totalGold = withTimeout(5000) { goldRepository.getTotalGoldEarned() }
+
+            val newlyUnlocked = AchievementChecker.checkAchievements(
+                skills = allSkills,
+                streakCount = dailyState.streakCount,
+                unlockedItems = allItems,
+                activeCombos = allCombos,
+                totalMinutes = characterState?.totalTimeMinutes ?: 0,
+                totalGold = totalGold
+            )
+
+            for (achievement in newlyUnlocked) {
+                achievementRepository.unlockAchievement(achievement.id)
             }
 
             // h. Return TimerResult with all gains

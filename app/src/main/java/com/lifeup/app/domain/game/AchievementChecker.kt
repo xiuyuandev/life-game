@@ -15,7 +15,7 @@ data class Achievement(
 )
 
 enum class AchievementCategory {
-    SKILL, STREAK, COLLECTION, COMBO
+    SKILL, STREAK, COLLECTION, COMBO, TIME, GOLD
 }
 
 object AchievementChecker {
@@ -41,14 +41,25 @@ object AchievementChecker {
         // COMBO achievements
         Achievement("combo_1", "跨界思维", "激活1个连击", AchievementCategory.COMBO),
         Achievement("combo_3", "多面手", "激活3个连击", AchievementCategory.COMBO),
-        Achievement("combo_5", "全能达人", "激活5个连击", AchievementCategory.COMBO)
+        Achievement("combo_5", "全能达人", "激活5个连击", AchievementCategory.COMBO),
+
+        // TIME achievements
+        Achievement("time_100", "百日筑基", "累计投资100小时", AchievementCategory.TIME),
+        Achievement("time_500", "千锤百炼", "累计投资500小时", AchievementCategory.TIME),
+        Achievement("time_1000", "万小时定律", "累计投资1000小时", AchievementCategory.TIME),
+
+        // GOLD achievements
+        Achievement("gold_1000", "小有积蓄", "累计获得1000金币", AchievementCategory.GOLD),
+        Achievement("gold_10000", "财富自由", "累计获得10000金币", AchievementCategory.GOLD)
     )
 
     fun checkAchievements(
         skills: List<Skill>,
         streakCount: Int,
         unlockedItems: List<Item>,
-        activeCombos: List<Combo>
+        activeCombos: List<Combo>,
+        totalMinutes: Int = 0,
+        totalGold: Int = 0
     ): List<Achievement> {
         val now = System.currentTimeMillis()
         val newlyUnlocked = mutableListOf<Achievement>()
@@ -59,6 +70,8 @@ object AchievementChecker {
                 AchievementCategory.STREAK -> checkStreakAchievement(achievement, streakCount)
                 AchievementCategory.COLLECTION -> checkCollectionAchievement(achievement, unlockedItems)
                 AchievementCategory.COMBO -> checkComboAchievement(achievement, activeCombos)
+                AchievementCategory.TIME -> checkTimeAchievement(achievement, totalMinutes)
+                AchievementCategory.GOLD -> checkGoldAchievement(achievement, totalGold)
             }
 
             if (conditionMet) {
@@ -105,6 +118,23 @@ object AchievementChecker {
             "combo_1" -> activeCombos.size >= 1
             "combo_3" -> activeCombos.size >= 3
             "combo_5" -> activeCombos.size >= 5
+            else -> false
+        }
+    }
+
+    private fun checkTimeAchievement(achievement: Achievement, totalMinutes: Int): Boolean {
+        return when (achievement.id) {
+            "time_100" -> totalMinutes >= 100 * 60
+            "time_500" -> totalMinutes >= 500 * 60
+            "time_1000" -> totalMinutes >= 1000 * 60
+            else -> false
+        }
+    }
+
+    private fun checkGoldAchievement(achievement: Achievement, totalGold: Int): Boolean {
+        return when (achievement.id) {
+            "gold_1000" -> totalGold >= 1000
+            "gold_10000" -> totalGold >= 10000
             else -> false
         }
     }

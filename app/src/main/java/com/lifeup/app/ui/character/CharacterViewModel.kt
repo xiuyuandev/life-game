@@ -140,6 +140,17 @@ class CharacterViewModel @Inject constructor(
     fun equipItem(item: Item) {
         viewModelScope.launch {
             try {
+                // Unequip any existing item in the same slot
+                val currentEquipped = _uiState.value.equippedItems
+                val sameSlotItem = currentEquipped.find { it.slotType == item.slotType && it.id != item.id }
+                if (sameSlotItem != null) {
+                    val unequipped = sameSlotItem.copy(
+                        isEquipped = false,
+                        equippedSlot = null
+                    )
+                    itemRepository.updateItem(unequipped)
+                }
+
                 val updated = item.copy(
                     isEquipped = true,
                     equippedSlot = item.slotType.name

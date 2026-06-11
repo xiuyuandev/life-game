@@ -79,14 +79,29 @@ class DataExporter @Inject constructor(
     suspend fun importFromJson(file: File): Boolean {
         return try {
             val jsonString = file.readText()
+            if (jsonString.isBlank() || jsonString.length > 50_000_000) {
+                return false // Empty or suspiciously large file
+            }
+
             val root = JSONObject(jsonString)
 
             val version = root.optInt("version", -1)
-            if (version != 1) {
-                return false
+            if (version < 1 || version > 2) {
+                return false // Unsupported version
             }
 
+            if (!root.has("data") || root.get("data") !is JSONObject) {
+                return false // Missing or invalid data section
+            }
             val data = root.getJSONObject("data")
+
+            // Validate required arrays exist (can be empty but must exist)
+            val requiredKeys = listOf("skills", "todos", "timeRecords", "combos", "items", "dailyStates", "achievements")
+            for (key in requiredKeys) {
+                if (!data.has(key)) {
+                    return false // Missing required section
+                }
+            }
 
             // Clear existing data (order matters due to foreign keys)
             timeRecordDao.deleteAll()
@@ -99,36 +114,52 @@ class DataExporter @Inject constructor(
 
             // Insert imported data (skills first due to foreign key dependencies)
             data.optJSONArray("skills")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toSkillEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toSkillEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) skillDao.insertAll(entities)
             }
             data.optJSONArray("todos")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toTodoEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toTodoEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) todoDao.insertAll(entities)
             }
             data.optJSONArray("timeRecords")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toTimeRecordEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toTimeRecordEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) timeRecordDao.insertAll(entities)
             }
             data.optJSONArray("combos")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toComboEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toComboEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) comboDao.insertAll(entities)
             }
             data.optJSONArray("items")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toItemEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toItemEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) itemDao.insertAll(entities)
             }
             data.optJSONArray("dailyStates")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toDailyStateEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toDailyStateEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) dailyStateDao.insertAll(entities)
             }
             data.optJSONArray("achievements")?.let { arr ->
-                val entities = (0 until arr.length()).map { arr.getJSONObject(it).toAchievementEntity() }
+                val entities = (0 until arr.length()).mapNotNull {
+                    try { arr.getJSONObject(it).toAchievementEntity() } catch (_: Exception) { null }
+                }
                 if (entities.isNotEmpty()) achievementDao.insertAll(entities)
             }
             data.optJSONObject("characterState")?.let { obj ->
                 if (obj.has("id")) {
-                    characterStateDao.insert(obj.toCharacterStateEntity())
+                    try {
+                        characterStateDao.insert(obj.toCharacterStateEntity())
+                    } catch (_: Exception) { }
                 }
             }
 

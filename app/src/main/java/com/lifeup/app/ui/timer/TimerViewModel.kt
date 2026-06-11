@@ -13,6 +13,7 @@ import com.lifeup.app.domain.repository.AchievementRepository
 import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
+import com.lifeup.app.domain.repository.GoldRepository
 import com.lifeup.app.domain.repository.ItemRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TimeRecordRepository
@@ -53,6 +54,7 @@ class TimerViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
+    private val goldRepository: GoldRepository,
     private val application: Application
 ) : ViewModel() {
 
@@ -142,7 +144,8 @@ class TimerViewModel @Inject constructor(
                     comboRepository = comboRepository,
                     itemRepository = itemRepository,
                     characterStateRepository = characterStateRepository,
-                    achievementRepository = achievementRepository
+                    achievementRepository = achievementRepository,
+                    goldRepository = goldRepository
                 )
                 _uiState.update {
                     it.copy(
