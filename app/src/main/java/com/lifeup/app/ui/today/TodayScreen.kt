@@ -5,6 +5,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -46,6 +49,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -59,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
@@ -66,6 +71,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifeup.app.ui.components.doneKeyboardActions
 import com.lifeup.app.ui.components.doneKeyboardOptions
@@ -96,27 +102,82 @@ fun TodayScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var addAsHabit by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    var fabExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    HapticFeedbackHelper.performLightClick(context)
-                    addAsHabit = false
-                    showAddDialog = true
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(16.dp),
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 4.dp,
-                    hoveredElevation = 8.dp
-                )
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "添加待办",
-                    modifier = Modifier.size(24.dp)
-                )
+                // Expanded menu items
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = fabExpanded,
+                    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 2 }),
+                    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 2 })
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Retroactive entry
+                        SmallFabItem(
+                            label = "补录时间",
+                            icon = Icons.Default.History,
+                            onClick = {
+                                fabExpanded = false
+                                navController.navigate(Screen.Retroactive.route)
+                            }
+                        )
+                        // Quick timer
+                        SmallFabItem(
+                            label = "开始计时",
+                            icon = Icons.Default.Timer,
+                            onClick = {
+                                fabExpanded = false
+                                // Navigate to timer with first skill or -1 for selection
+                                onNavigateToTimer(-1L)
+                            }
+                        )
+                        // Add todo
+                        SmallFabItem(
+                            label = "添加待办",
+                            icon = Icons.Default.Add,
+                            onClick = {
+                                fabExpanded = false
+                                addAsHabit = false
+                                showAddDialog = true
+                            }
+                        )
+                    }
+                }
+
+                // Main FAB
+                FloatingActionButton(
+                    onClick = {
+                        HapticFeedbackHelper.performLightClick(context)
+                        fabExpanded = !fabExpanded
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 4.dp,
+                        hoveredElevation = 8.dp
+                    )
+                ) {
+                    val rotation by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (fabExpanded) 45f else 0f,
+                        animationSpec = androidx.compose.animation.core.tween(200),
+                        label = "fabRotation"
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = if (fabExpanded) "关闭" else "更多操作",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = rotation }
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -201,6 +262,24 @@ fun TodayScreen(
                             )
                         }
                     }
+                }
+
+                // Today's stats overview
+                item {
+                    TodayStatsOverview(
+                        investmentMinutes = uiState.investmentMinutes,
+                        consumptionMinutes = uiState.consumptionMinutes,
+                        goldEarned = uiState.goldEarned,
+                        goldSpent = uiState.goldSpent,
+                        habitsCompleted = uiState.habitsCompleted,
+                        todosCompleted = uiState.todosCompleted,
+                        characterLevel = uiState.characterLevel,
+                        totalExp = uiState.totalExp,
+                        expToNextLevel = uiState.expToNextLevel,
+                        streakCount = uiState.streakCount,
+                        onNavigateToCharacter = { navController.navigate(Screen.Character.route) },
+                        onNavigateToLedger = { navController.navigate(Screen.Ledger.route) }
+                    )
                 }
 
                 // Habit section
@@ -663,5 +742,221 @@ private fun FilterChip(
         shape = RoundedCornerShape(8.dp)
     ) {
         label()
+    }
+}
+
+@Composable
+private fun TodayStatsOverview(
+    investmentMinutes: Int,
+    consumptionMinutes: Int,
+    goldEarned: Int,
+    goldSpent: Int,
+    habitsCompleted: Int,
+    todosCompleted: Int,
+    characterLevel: Int,
+    totalExp: Long,
+    expToNextLevel: Long,
+    streakCount: Int,
+    onNavigateToCharacter: () -> Unit,
+    onNavigateToLedger: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            // Top row: Character level + streak
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Character level chip
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .clickable(onClick = onNavigateToCharacter)
+                ) {
+                    Text(
+                        text = "⭐",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Lv.$characterLevel",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "(${totalExp} XP)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+
+                // Streak chip
+                if (streakCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "🔥",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${streakCount}天",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Stats grid
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatItem(
+                    icon = "📈",
+                    label = "投资",
+                    value = "${investmentMinutes}分",
+                    modifier = Modifier.weight(1f)
+                )
+                StatItem(
+                    icon = "📉",
+                    label = "消耗",
+                    value = "${consumptionMinutes}分",
+                    modifier = Modifier.weight(1f)
+                )
+                StatItem(
+                    icon = "💰",
+                    label = "金币",
+                    value = "${goldEarned - goldSpent}",
+                    modifier = Modifier.weight(1f)
+                )
+                StatItem(
+                    icon = "✅",
+                    label = "完成",
+                    value = "${habitsCompleted + todosCompleted}",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Exp progress bar
+            if (expToNextLevel > 0) {
+                Spacer(modifier = Modifier.height(10.dp))
+                val progress = if (expToNextLevel > 0) {
+                    val currentLevelThreshold = com.lifeup.app.domain.calculator.AttributeCalculator.getLevelThreshold(characterLevel)
+                    val nextThreshold = com.lifeup.app.domain.calculator.AttributeCalculator.getLevelThreshold(characterLevel + 1)
+                    val levelRange = (nextThreshold - currentLevelThreshold).toFloat()
+                    val currentInLevel = (totalExp - currentLevelThreshold).toFloat()
+                    (currentInLevel / levelRange).coerceIn(0f, 1f)
+                } else 0f
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "升级还需 ${expToNextLevel} XP",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    icon: String,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = icon,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SmallFabItem(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+        )
+        androidx.compose.material3.SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }

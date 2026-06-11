@@ -37,7 +37,17 @@ data class TodayUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val tip: TipContent? = null
+    val tip: TipContent? = null,
+    // Game stats for today
+    val investmentMinutes: Int = 0,
+    val consumptionMinutes: Int = 0,
+    val goldEarned: Int = 0,
+    val goldSpent: Int = 0,
+    val habitsCompleted: Int = 0,
+    val todosCompleted: Int = 0,
+    val characterLevel: Int = 1,
+    val totalExp: Long = 0L,
+    val expToNextLevel: Long = 1000L
 )
 
 @HiltViewModel
@@ -46,6 +56,7 @@ class TodayViewModel @Inject constructor(
     private val dailyStateRepository: DailyStateRepository,
     private val timeRecordRepository: TimeRecordRepository,
     private val skillRepository: SkillRepository,
+    private val characterStateRepository: com.lifeup.app.domain.repository.CharacterStateRepository,
     private val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
@@ -137,6 +148,20 @@ class TodayViewModel @Inject constructor(
             }
 
             try {
+                val characterState = try {
+                    withTimeout(5000) { characterStateRepository.getCharacterState().first() }
+                } catch (_: Exception) {
+                    null
+                }
+                val charLevel = characterState?.let {
+                    com.lifeup.app.domain.calculator.AttributeCalculator.calculateCharacterLevel(it.totalExp)
+                } ?: 1
+                val expToNext = characterState?.let {
+                    val currentLevel = com.lifeup.app.domain.calculator.AttributeCalculator.calculateCharacterLevel(it.totalExp)
+                    val nextThreshold = com.lifeup.app.domain.calculator.AttributeCalculator.getLevelThreshold(currentLevel + 1)
+                    nextThreshold - it.totalExp
+                } ?: 1000L
+
                 combine(
                     todoRepository.getHabitsByDate(todayStr),
                     todoRepository.getTodosByDate(todayStr),
@@ -151,6 +176,8 @@ class TodayViewModel @Inject constructor(
                     Triple(habits, todos, state)
                 }.collect { (habits, todos, dailyState) ->
                     val streak = dailyStateRepository.getLatestStreak() ?: dailyState.streakCount
+                    val habitsCompleted = habits.count { it.isCompleted }
+                    val todosCompleted = todos.count { it.isCompleted }
 
                     _uiState.update { currentState ->
                         currentState.copy(
@@ -161,13 +188,20 @@ class TodayViewModel @Inject constructor(
                             streakCount = streak,
                             isLoading = false,
                             isRefreshing = false,
-                            error = null
+                            error = null,
+                            investmentMinutes = dailyState.investmentMinutes,
+                            consumptionMinutes = dailyState.consumptionMinutes,
+                            goldEarned = dailyState.goldEarned,
+                            goldSpent = dailyState.goldSpent,
+                            habitsCompleted = habitsCompleted,
+                            todosCompleted = todosCompleted,
+                            characterLevel = charLevel,
+                            totalExp = characterState?.totalExp ?: 0L,
+                            expToNextLevel = expToNext.coerceAtLeast(0L)
                         )
                     }
 
                     // Persist counts to DailyState if out of sync
-                    val habitsCompleted = habits.count { it.isCompleted }
-                    val todosCompleted = todos.count { it.isCompleted }
                     if (dailyState.habitsCompleted != habitsCompleted || dailyState.todosCompleted != todosCompleted || dailyState.streakCount != streak) {
                         dailyStateRepository.insertOrUpdateState(
                             dailyState.copy(
@@ -190,18 +224,15 @@ class TodayViewModel @Inject constructor(
         }
     }
 
-    private fun calculateEnergy(habits: List<Todo>, todos: List<Todo>): Float {
-        var energy = 0f
-        val allItems = habits + todos
-        for (item in allItems) {
-            if (item.isCompleted) {
-                energy += when (item.priority) {
-                    Priority.HIGH -> 1.5f
-                    else -> 1f
-                }
-            }
-        }
-        return energy
+    /**
+     * Calculate energy regeneration based on elapsed time since last update.
+     * Energy regenerates at 5 points per hour, up to the energy cap.
+     */
+    private fun calculateRegeneratedEnergy(currentEnergy: Float, energyCap: Float, lastUpdatedMs: Long): Float {
+        if (currentEnergy >= energyCap) return currentEnergy
+        val hoursElapsed = ((System.currentTimeMillis() - lastUpdatedMs) / (60 * 60 * 1000.0)).coerceAtLeast(0.0)
+        val regenerated = (hoursElapsed * 5).toFloat()
+        return (currentEnergy + regenerated).coerceAtMost(energyCap)
     }
 
     fun toggleTodo(id: Long) {
@@ -218,7 +249,7 @@ class TodayViewModel @Inject constructor(
                 )
                 todoRepository.updateTodo(updated)
 
-                // Apply energy cost and gold reward on completion
+                // Apply gold reward on completion (energy is managed by Timer/GameEngine only)
                 if (!item.isCompleted) {
                     val todayStr = LocalDate.now().format(dateFormat)
                     val dailyState = try {
@@ -228,15 +259,14 @@ class TodayViewModel @Inject constructor(
                     }
                     val state = dailyState ?: DailyState(date = todayStr)
 
-                    val energyCost = if (item.isHabit) 5f else 0f
-                    val goldReward = 2
+                    val goldReward = if (item.isHabit) 5 else 2
 
                     dailyStateRepository.insertOrUpdateState(
                         state.copy(
-                            energy = (state.energy - energyCost).coerceAtLeast(0f),
                             goldEarned = state.goldEarned + goldReward,
                             habitsCompleted = state.habitsCompleted + if (item.isHabit) 1 else 0,
-                            todosCompleted = state.todosCompleted + if (!item.isHabit) 1 else 0
+                            todosCompleted = state.todosCompleted + if (!item.isHabit) 1 else 0,
+                            lastUpdated = System.currentTimeMillis()
                         )
                     )
                 }
@@ -297,13 +327,18 @@ class TodayViewModel @Inject constructor(
                     null
                 }
                 val state = dailyState ?: DailyState(date = todayStr)
-                val calculatedEnergy = calculateEnergy(_uiState.value.habits, _uiState.value.todos)
 
-                _uiState.update { it.copy(energy = calculatedEnergy, energyCap = state.energyCap) }
+                // Regenerate energy based on elapsed time since last update
+                val lastUpdated = state.lastUpdated.takeIf { it > 0 } ?: System.currentTimeMillis()
+                val regeneratedEnergy = calculateRegeneratedEnergy(state.energy, state.energyCap, lastUpdated)
 
-                dailyStateRepository.insertOrUpdateState(
-                    state.copy(energy = calculatedEnergy)
-                )
+                _uiState.update { it.copy(energy = regeneratedEnergy, energyCap = state.energyCap) }
+
+                if (regeneratedEnergy != state.energy) {
+                    dailyStateRepository.insertOrUpdateState(
+                        state.copy(energy = regeneratedEnergy, lastUpdated = System.currentTimeMillis())
+                    )
+                }
             } catch (_: Exception) {
             }
         }
