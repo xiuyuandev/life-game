@@ -34,7 +34,9 @@ object DatabaseModule {
                 LifeUpDatabase.MIGRATION_2_3,
                 LifeUpDatabase.MIGRATION_3_4,
                 LifeUpDatabase.MIGRATION_4_5,
-                LifeUpDatabase.MIGRATION_5_6
+                LifeUpDatabase.MIGRATION_5_6,
+                LifeUpDatabase.MIGRATION_6_7,
+                LifeUpDatabase.MIGRATION_7_8
             )
             .build()
     }

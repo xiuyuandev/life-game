@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -204,6 +205,7 @@ class TimerService : Service() {
         if (!_isRunning.value || _isPaused.value) return
         _isPaused.value = true
         accumulatedSeconds = _elapsedSeconds.value
+        saveTimerState()
         updateNotification()
     }
 
@@ -211,6 +213,7 @@ class TimerService : Service() {
         if (!_isRunning.value || !_isPaused.value) return
         _isPaused.value = false
         startTimeMs = System.currentTimeMillis()
+        saveTimerState()
         updateNotification()
     }
 

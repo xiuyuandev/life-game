@@ -23,8 +23,13 @@ data class Skill(
 ) {
     fun getProgressToNextLevel(): Float {
         if (level <= 0) return 0f
-        val currentThreshold = customThresholds[level] ?: (level * 60)
-        val nextThreshold = customThresholds[level + 1] ?: ((level + 1) * 60)
+        // customThresholds map keys are the level to reach; e.g., [2] = 60 means "60 minutes to reach level 2".
+        // For level N, current position is the threshold for reaching level N (0 if N=1),
+        // and next position is the threshold for reaching level N+1.
+        val currentThreshold: Long = if (level > 1) {
+            (customThresholds[level] ?: ((level - 1) * 60)).toLong()
+        } else 0L
+        val nextThreshold: Long = (customThresholds[level + 1] ?: (level * 60)).toLong()
         val range = nextThreshold - currentThreshold
         if (range <= 0) return 1f
         val progressInLevel = totalMinutes - currentThreshold

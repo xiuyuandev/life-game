@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -381,20 +380,7 @@ fun BackupScreen(
                 Button(
                     onClick = {
                         pendingImportUri?.let { uri ->
-                            try {
-                                val inputStream = context.contentResolver.openInputStream(uri)
-                                val tempFile = File(context.cacheDir, "import_temp.json")
-                                inputStream?.use { input ->
-                                    tempFile.outputStream().use { output ->
-                                        input.copyTo(output)
-                                    }
-                                }
-                                viewModel.importJson(tempFile)
-                                tempFile.delete()
-                            } catch (e: Exception) {
-                                // Surface the error via the ViewModel's message channel
-                                viewModel.clearMessage()
-                            }
+                            viewModel.importJsonFromUri(context, uri)
                         }
                         showImportConfirmDialog = false
                         pendingImportUri = null

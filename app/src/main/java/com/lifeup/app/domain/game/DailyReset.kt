@@ -22,7 +22,7 @@ object DailyReset {
         val today = LocalDate.now().format(dateFormatter)
         val yesterday = LocalDate.now().minusDays(1).format(dateFormatter)
 
-        // a. Reset energy to 0 for new day - create new DailyState with fresh energy
+        // a. Refresh energy to full for new day - create new DailyState with fresh energy
         // b. Reset habits (uncheck all habits for the new day)
         val yesterdayHabits = try {
             withTimeout(5000) { todoRepository.getHabitsByDate(yesterday).first() }
