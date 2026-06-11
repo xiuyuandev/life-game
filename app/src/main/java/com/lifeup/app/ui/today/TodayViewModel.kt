@@ -57,7 +57,7 @@ class TodayViewModel @Inject constructor(
     private val timeRecordRepository: TimeRecordRepository,
     private val skillRepository: SkillRepository,
     private val characterStateRepository: com.lifeup.app.domain.repository.CharacterStateRepository,
-    private val settingsPrefs: SettingsPrefs
+    val settingsPrefs: SettingsPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TodayUiState())

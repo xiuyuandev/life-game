@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -176,21 +177,15 @@ fun ProfileScreen(
                 ) {
                     Column {
                         ProfileMenuItem(
+                            icon = Icons.Default.Tune,
+                            title = "偏好设置",
+                            subtitle = "声音、触感、主题",
+                            onClick = onNavigateToSettings
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
                             icon = Icons.Default.CloudSync,
                             title = "数据同步",
-                            onClick = onNavigateToBackup
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-                        ProfileMenuItem(
-                            icon = Icons.Default.DarkMode,
-                            title = "主题切换",
-                            subtitle = themeModeLabel(themeMode),
-                            onClick = { showThemeDialog = true }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-                        ProfileMenuItem(
-                            icon = Icons.Default.Sync,
-                            title = "数据导出",
                             onClick = onNavigateToBackup
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)

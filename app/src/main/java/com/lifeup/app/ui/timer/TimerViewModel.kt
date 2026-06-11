@@ -53,7 +53,7 @@ class TimerViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
-    private val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs,
+    val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs,
     private val application: Application
 ) : ViewModel() {
 

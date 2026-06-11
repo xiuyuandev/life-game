@@ -23,6 +23,7 @@ import com.lifeup.app.ui.profile.ProfileScreen
 import com.lifeup.app.ui.splash.SplashScreen
 import com.lifeup.app.ui.retroactive.RetroactiveScreen
 import com.lifeup.app.ui.review.ReviewScreen
+import com.lifeup.app.ui.settings.SettingsScreen
 import com.lifeup.app.ui.shop.ShopScreen
 import com.lifeup.app.ui.showcase.ShowcaseScreen
 import com.lifeup.app.ui.skills.CreateSkillScreen
@@ -142,7 +143,7 @@ fun LifeUpNavGraph(
                 onNavigateToReview = { navController.navigate(Screen.Review.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToLedger = { navController.navigate(Screen.Ledger.route) },
-                onNavigateToSettings = { navController.navigate(Screen.About.route) },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                 onNavigateToBackup = { navController.navigate(Screen.Backup.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) }
             )
@@ -249,6 +250,15 @@ fun LifeUpNavGraph(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) },
                 onNavigateToBackup = { navController.navigate(Screen.Backup.route) }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToBackup = { navController.navigate(Screen.Backup.route) },
+                onNavigateToAbout = { navController.navigate(Screen.About.route) },
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) }
             )
         }
 

@@ -32,7 +32,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -69,7 +68,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -84,13 +82,12 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import com.lifeup.app.data.db.Priority
 import com.lifeup.app.ui.components.DismissBackground
-import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.ErrorState
-import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.components.ScrollToTopButton
-import com.lifeup.app.ui.components.StreakFlame
 import com.lifeup.app.ui.components.TodoItem
-import java.time.LocalTime
+import com.lifeup.app.ui.feedback.DailyQuote
+import com.lifeup.app.ui.feedback.rememberHapticController
+import com.lifeup.app.ui.feedback.rememberSoundController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +101,8 @@ fun TodayScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = rememberHapticController(viewModel.settingsPrefs)
+    val sound = rememberSoundController(viewModel.settingsPrefs)
     var showAddDialog by remember { mutableStateOf(false) }
     var addAsHabit by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -160,7 +159,8 @@ fun TodayScreen(
                 // Main FAB
                 FloatingActionButton(
                     onClick = {
-                        HapticFeedbackHelper.performLightClick(context)
+                        haptic.light()
+                        sound.tap()
                         fabExpanded = !fabExpanded
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -216,11 +216,14 @@ fun TodayScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Top bar: greeting + date + streak
+                // Top hero: greeting + date + energy ring + streak + daily quote
                 item {
-                    TopBar(
-                        todayDate = uiState.todayDate,
-                        streakCount = uiState.streakCount
+                    TodayHeroSection(
+                        characterLevel = uiState.characterLevel,
+                        energyCurrent = uiState.energy,
+                        energyCap = uiState.energyCap,
+                        streakDays = uiState.streakCount,
+                        quote = DailyQuote.forDate()
                     )
                 }
 
@@ -235,37 +238,6 @@ fun TodayScreen(
                             tip = uiState.tip,
                             onDismiss = { viewModel.dismissTip() }
                         )
-                    }
-                }
-
-                // Energy bar card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                                            MaterialTheme.colorScheme.surface
-                                        )
-                                    )
-                                )
-                                .padding(16.dp)
-                        ) {
-                            EnergyBar(
-                                current = uiState.energy,
-                                cap = uiState.energyCap
-                            )
-                        }
                     }
                 }
 
@@ -324,7 +296,8 @@ fun TodayScreen(
                             TodoItem(
                                 todo = habit,
                                 onToggle = {
-                                    HapticFeedbackHelper.performTick(context)
+                                    haptic.tick()
+                                    sound.tap()
                                     viewModel.toggleTodo(habit.id)
                                 },
                                 onDelete = { viewModel.deleteTodo(habit.id) }
@@ -373,7 +346,8 @@ fun TodayScreen(
                             TodoItem(
                                 todo = todo,
                                 onToggle = {
-                                    HapticFeedbackHelper.performTick(context)
+                                    haptic.tick()
+                                    sound.tap()
                                     viewModel.toggleTodo(todo.id)
                                 },
                                 onDelete = { viewModel.deleteTodo(todo.id) }
@@ -422,86 +396,6 @@ fun TodayScreen(
                 showAddDialog = false
             }
         )
-    }
-}
-
-@Composable
-private fun TopBar(
-    todayDate: String,
-    streakCount: Int
-) {
-    val hour = LocalTime.now().hour
-    val greeting = when {
-        hour < 6 -> "夜深了"
-        hour < 9 -> "早安"
-        hour < 12 -> "上午好"
-        hour < 14 -> "中午好"
-        hour < 18 -> "下午好"
-        hour < 22 -> "晚上好"
-        else -> "夜深了"
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                text = greeting,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = todayDate,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        if (streakCount > 0) {
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                ),
-                border = BorderStroke(1.dp, Color(0xFFFF6D00).copy(alpha = 0.3f))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color(0xFFFF6D00).copy(alpha = 0.08f),
-                                    Color(0xFFFF8A50).copy(alpha = 0.12f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        StreakFlame(streakCount = streakCount)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "$streakCount",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFF6D00)
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = "天连续",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFFF6D00).copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

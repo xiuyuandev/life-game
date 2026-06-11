@@ -72,8 +72,9 @@ import com.lifeup.app.domain.game.TimerResult
 import com.lifeup.app.service.TimerManager
 import com.lifeup.app.ui.components.AnimatedCounter
 import com.lifeup.app.ui.components.ConfettiAnimation
-import com.lifeup.app.ui.components.HapticFeedbackHelper
-import com.lifeup.app.ui.components.LevelUpAnimation
+import com.lifeup.app.ui.components.PremiumLevelUpAnimation
+import com.lifeup.app.ui.feedback.rememberHapticController
+import com.lifeup.app.ui.feedback.rememberSoundController
 import com.lifeup.app.ui.theme.MonospaceFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,6 +86,8 @@ fun TimerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val haptic = rememberHapticController(viewModel.settingsPrefs)
+    val sound = rememberSoundController(viewModel.settingsPrefs)
     var showConfetti by remember { mutableStateOf(false) }
     var showLevelUp by remember { mutableStateOf(false) }
 
@@ -205,7 +208,8 @@ fun TimerScreen(
                             // Start button - large and prominent
                             Button(
                                 onClick = {
-                                    HapticFeedbackHelper.performHeavyClick(context)
+                                    haptic.heavy()
+                                    sound.tap()
                                     viewModel.startTimer()
                                 },
                                 modifier = Modifier.size(80.dp),
@@ -229,6 +233,8 @@ fun TimerScreen(
                             // Pause / Resume button
                             OutlinedButton(
                                 onClick = {
+                                    haptic.light()
+                                    sound.tap()
                                     if (uiState.isPaused) {
                                         viewModel.resumeTimer()
                                     } else {
@@ -254,7 +260,7 @@ fun TimerScreen(
                             // Stop button
                             Button(
                                 onClick = {
-                                    HapticFeedbackHelper.performSuccess(context)
+                                    haptic.success()
                                     viewModel.stopTimer()
                                 },
                                 modifier = Modifier.size(68.dp),
@@ -287,12 +293,16 @@ fun TimerScreen(
             if (result.leveledUp) {
                 showConfetti = true
                 showLevelUp = true
+                sound.levelUp()
+            } else {
+                sound.success()
             }
         }
         TimerSettlementSheet(
             result = result,
             durationSeconds = uiState.elapsedSeconds,
-            onDismiss = { viewModel.dismissSettlement() }
+            onDismiss = { viewModel.dismissSettlement() },
+            haptic = haptic
         )
     }
 
@@ -305,7 +315,7 @@ fun TimerScreen(
 
     if (showLevelUp) {
         val result = uiState.settlementResult!!
-        LevelUpAnimation(
+        PremiumLevelUpAnimation(
             newLevel = result.newLevel,
             modifier = Modifier.fillMaxSize(),
             onComplete = { showLevelUp = false }
@@ -428,9 +438,13 @@ private fun TimerDisplay(
 private fun TimerSettlementSheet(
     result: TimerResult,
     durationSeconds: Long,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    haptic: com.lifeup.app.ui.feedback.HapticController = com.lifeup.app.ui.feedback.NoopHapticController
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    LaunchedEffect(result) {
+        if (result.leveledUp) haptic.levelUp()
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -533,8 +547,6 @@ private fun TimerSettlementSheet(
 
                     // Level up
                     if (result.leveledUp) {
-                        val context = LocalContext.current
-                        HapticFeedbackHelper.performLevelUp(context)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier

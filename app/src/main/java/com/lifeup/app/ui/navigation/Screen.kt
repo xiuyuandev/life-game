@@ -24,5 +24,6 @@ sealed class Screen(val route: String, val title: String) {
     data object Ledger : Screen("ledger", "时间账本")
     data object Backup : Screen("backup", "数据管理")
     data object About : Screen("about", "关于")
+    data object Settings : Screen("settings", "偏好设置")
     data object PrivacyPolicy : Screen("privacy_policy", "隐私政策")
 }

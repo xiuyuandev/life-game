@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -38,6 +39,9 @@ class SettingsPrefs @Inject constructor(
         val OUTFIT_PRESETS = stringPreferencesKey("outfit_presets")
         val LAST_BACKUP_DATE = stringPreferencesKey("last_backup_date")
         val DISMISSED_TIPS = stringPreferencesKey("dismissed_tips")
+        val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
+        val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
+        val DAILY_QUOTE_INDEX = intPreferencesKey("daily_quote_index")
     }
 
     fun getThemeMode(): Flow<String> {
@@ -125,6 +129,44 @@ class SettingsPrefs @Inject constructor(
             val set = if (current.isBlank()) mutableSetOf() else current.split(",").toMutableSet()
             set.add(tipId)
             preferences[Keys.DISMISSED_TIPS] = set.joinToString(",")
+        }
+    }
+
+    // ---- Sound & Haptic feedback preferences ----
+
+    fun isSoundEnabled(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[Keys.SOUND_ENABLED] ?: true
+        }
+    }
+
+    suspend fun setSoundEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.SOUND_ENABLED] = enabled
+        }
+    }
+
+    fun isHapticEnabled(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[Keys.HAPTIC_ENABLED] ?: true
+        }
+    }
+
+    suspend fun setHapticEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[Keys.HAPTIC_ENABLED] = enabled
+        }
+    }
+
+    fun getDailyQuoteIndex(): Flow<Int> {
+        return dataStore.data.map { preferences ->
+            preferences[Keys.DAILY_QUOTE_INDEX] ?: 0
+        }
+    }
+
+    suspend fun setDailyQuoteIndex(index: Int) {
+        dataStore.edit { preferences ->
+            preferences[Keys.DAILY_QUOTE_INDEX] = index
         }
     }
 }
