@@ -17,6 +17,7 @@ val EnergyAmber = Color(0xFFFFB300)
 val EnergyAmberDark = Color(0xFFFFD54F)
 
 // Category colors
+val CategorySurvival = Color(0xFF00BFA5)
 val CategoryLivelihood = Color(0xFF00BFA5)
 val CategorySocial = Color(0xFFFF8A50)
 val CategoryLanguage = Color(0xFF448AFF)
@@ -24,6 +25,7 @@ val CategoryLife = Color(0xFF66BB6A)
 val CategoryPhysical = Color(0xFFFF5252)
 val CategoryMental = Color(0xFF7E57C2)
 val CategoryArt = Color(0xFFC9A87C)
+val ArtBronze = Color(0xFFB8865F)
 
 // Light scheme additional colors
 val OnPrimaryLight = Color(0xFFFFFFFF)
