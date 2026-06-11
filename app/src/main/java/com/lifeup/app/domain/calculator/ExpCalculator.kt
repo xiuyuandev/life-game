@@ -14,6 +14,8 @@ object ExpCalculator {
         5 to 1.25
     )
 
+    private const val MAX_EXP = Long.MAX_VALUE / 2
+
     fun calculateExp(
         baseMinutes: Int,
         skillLevel: Int,
@@ -23,23 +25,28 @@ object ExpCalculator {
         isFirstTimerToday: Boolean,
         dailyInvestmentMinutes: Int
     ): Long {
-        val baseExp = baseMinutes * 10L
+        val safeBaseMinutes = baseMinutes.coerceAtLeast(0)
+        val safeSkillLevel = skillLevel.coerceAtLeast(1)
+        val safeStreakDays = streakDays.coerceAtLeast(0)
+        val safeDailyInvestmentMinutes = dailyInvestmentMinutes.coerceAtLeast(0)
 
-        val tierMultiplier = tierMultipliers[skillLevel.coerceIn(1, 5)] ?: 1.00
+        val baseExp = safeBaseMinutes * 10L
+
+        val tierMultiplier = tierMultipliers[safeSkillLevel.coerceIn(1, 5)] ?: 1.00
 
         val itemMultiplier = equippedItems.fold(1.0) { acc, item ->
-            acc + item.expBonusContribution
+            acc + (item.expBonusContribution.coerceAtLeast(0f))
         }
 
         val comboMultiplier = activeCombos.fold(1.0) { acc, combo ->
-            acc * combo.expBonus
+            acc * (combo.expBonus.coerceAtLeast(0.0))
         }
 
-        val streakMultiplier = 1.0 + min(streakDays, 30) * 0.02
+        val streakMultiplier = 1.0 + min(safeStreakDays, 30) * 0.02
 
         val firstHitMultiplier = if (isFirstTimerToday) 1.5 else 1.0
 
-        val softCapMultiplier = calculateSoftCapMultiplier(dailyInvestmentMinutes)
+        val softCapMultiplier = calculateSoftCapMultiplier(safeDailyInvestmentMinutes)
 
         val totalExp = baseExp *
                 tierMultiplier *
@@ -49,7 +56,8 @@ object ExpCalculator {
                 firstHitMultiplier *
                 softCapMultiplier
 
-        return totalExp.toLong()
+        val result = totalExp.toLong()
+        return if (result < 0 || result > MAX_EXP) MAX_EXP else result
     }
 
     private fun calculateSoftCapMultiplier(dailyInvestmentMinutes: Int): Double {

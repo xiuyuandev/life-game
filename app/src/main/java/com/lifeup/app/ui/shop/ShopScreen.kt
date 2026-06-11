@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -101,9 +102,7 @@ fun ShopScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🛒 金币商店", fontWeight = FontWeight.Bold)
-                }
+                Text("🛒 金币商店", fontWeight = FontWeight.Bold)
             },
             navigationIcon = {
                 IconButton(onClick = onNavigateBack) {
@@ -124,7 +123,7 @@ fun ShopScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
+                            contentDescription = "金币",
                             modifier = Modifier.size(18.dp),
                             tint = Color(0xFFFFB300)
                         )
@@ -226,14 +225,14 @@ fun ShopScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFFFFB300)
                         ),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("购买")
                     }
                 } else {
                     Button(
                         onClick = { viewModel.dismissPurchaseDialog() },
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("确定")
                     }
@@ -259,17 +258,17 @@ private fun EmptyGoldState(onNavigateToTimer: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -299,7 +298,7 @@ private fun EmptyGoldState(onNavigateToTimer: () -> Unit) {
                 ) {
                     Icon(
                         imageVector = Icons.Default.Timer,
-                        contentDescription = null,
+                        contentDescription = "计时器",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -375,7 +374,7 @@ private fun ShopContent(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Timer,
-                        contentDescription = null,
+                        contentDescription = "计时器",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -389,10 +388,10 @@ private fun ShopContent(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 horizontal = 16.dp,
-                vertical = 8.dp
+                vertical = 12.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(
                 items = filteredItems,
@@ -421,12 +420,11 @@ private fun ShopItemCard(
     val tierColor = tierColorMap[template.itemTier] ?: Color.Gray
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -451,7 +449,7 @@ private fun ShopItemCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(16.dp)
             ) {
                 // Tier badge + Slot label
                 Row(
@@ -533,7 +531,7 @@ private fun ShopItemCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.ShoppingCart,
-                            contentDescription = null,
+                            contentDescription = "金币",
                             modifier = Modifier.size(14.dp),
                             tint = Color(0xFFFFB300)
                         )
@@ -564,8 +562,8 @@ private fun ShopItemCard(
                                 horizontal = 12.dp,
                                 vertical = 4.dp
                             ),
-                            modifier = Modifier.height(28.dp),
-                            shape = RoundedCornerShape(8.dp)
+                            modifier = Modifier.height(32.dp),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
                                 text = "购买",

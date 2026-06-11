@@ -1,6 +1,9 @@
 package com.lifeup.app.ui.character
 
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -58,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -254,8 +258,20 @@ private fun CharacterHeader(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Character avatar with ring
+                val infiniteTransition = rememberInfiniteTransition(label = "avatarPulse")
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 1f,
+                    targetValue = 1.05f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1200),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "avatarPulseScale"
+                )
+
                 Box(
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.scale(pulseScale)
                 ) {
                     // Outer ring
                     Canvas(modifier = Modifier.size(108.dp)) {

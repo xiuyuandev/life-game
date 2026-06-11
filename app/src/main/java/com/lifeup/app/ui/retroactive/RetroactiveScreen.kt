@@ -33,13 +33,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -75,100 +74,89 @@ fun RetroactiveScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("⏱️ 补录时间") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                }
-            )
-        }
-    ) { innerPadding ->
+    ScreenScaffold(
+        title = "⏱️ 补录时间",
+        onNavigateBack = onNavigateBack
+    ) {
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            item {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Skill selector
-                SkillSelector(
-                    skills = uiState.skills,
-                    selectedSkillId = uiState.selectedSkillId,
-                    onSkillSelected = { viewModel.selectSkill(it) }
-                )
-
-                // Date picker
-                DatePickerField(
-                    selectedDate = uiState.selectedDate,
-                    onDateSelected = { viewModel.selectDate(it) }
-                )
-
-                // Start time picker
-                TimePickerField(
-                    hour = uiState.startHour,
-                    minute = uiState.startMinute,
-                    onTimeSelected = { h, m -> viewModel.setStartTime(h, m) }
-                )
-
-                // Duration slider
-                DurationSlider(
-                    durationMinutes = uiState.durationMinutes,
-                    onDurationChanged = { viewModel.setDuration(it) }
-                )
-
-                // Record type toggle
-                RecordTypeToggle(
-                    recordType = uiState.recordType,
-                    onToggle = { viewModel.toggleRecordType() }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Save button
-                Button(
-                    onClick = { viewModel.saveRetroactive() },
+            item {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    enabled = !uiState.isSaving && uiState.selectedSkillId != null,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                        .verticalScroll(rememberScrollState())
+                        .imePadding(),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    if (uiState.isSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .height(20.dp)
-                                .width(20.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("保存")
-                    }
-                }
+                    // Skill selector
+                    SkillSelector(
+                        skills = uiState.skills,
+                        selectedSkillId = uiState.selectedSkillId,
+                        onSkillSelected = { viewModel.selectSkill(it) }
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    // Date picker
+                    DatePickerField(
+                        selectedDate = uiState.selectedDate,
+                        onDateSelected = { viewModel.selectDate(it) }
+                    )
+
+                    // Start time picker
+                    TimePickerField(
+                        hour = uiState.startHour,
+                        minute = uiState.startMinute,
+                        onTimeSelected = { h, m -> viewModel.setStartTime(h, m) }
+                    )
+
+                    // Duration slider
+                    DurationSlider(
+                        durationMinutes = uiState.durationMinutes,
+                        onDurationChanged = { viewModel.setDuration(it) }
+                    )
+
+                    // Record type toggle
+                    RecordTypeToggle(
+                        recordType = uiState.recordType,
+                        onToggle = { viewModel.toggleRecordType() }
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Save button
+                    Button(
+                        onClick = { viewModel.saveRetroactive() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = !uiState.isSaving && uiState.selectedSkillId != null,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        if (uiState.isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .height(20.dp)
+                                    .width(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("保存")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
@@ -270,7 +258,7 @@ private fun DatePickerField(
             ) {
             Icon(
                 imageVector = Icons.Default.CalendarToday,
-                contentDescription = null,
+                contentDescription = "选择日期",
                 modifier = Modifier.padding(end = 8.dp)
             )
             val displayText = try {
@@ -314,7 +302,7 @@ private fun TimePickerField(
         ) {
             Icon(
                 imageVector = Icons.Default.Schedule,
-                contentDescription = null,
+                contentDescription = "选择时间",
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(String.format("%02d:%02d", hour, minute))

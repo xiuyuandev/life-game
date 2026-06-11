@@ -3,7 +3,6 @@ package com.lifeup.app.ui.achievement
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,11 +25,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,80 +77,45 @@ fun AchievementScreen(
         )
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text("🏆 成就墙 ${uiState.unlockedCount}/${uiState.totalCount}")
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                }
+    ScreenScaffold(
+        title = "🏆 成就墙 ${uiState.unlockedCount}/${uiState.totalCount}",
+        onNavigateBack = onNavigateBack,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) {
+        // Overall progress bar
+        item {
+            OverallProgress(
+                unlockedCount = uiState.unlockedCount,
+                totalCount = uiState.totalCount
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Overall progress bar
+
+        // Sections by category
+        val categoryLabels = mapOf(
+            AchievementCategory.SKILL to "⚔️ 技能成就",
+            AchievementCategory.STREAK to "🔥 连续打卡",
+            AchievementCategory.COLLECTION to "⭐ 收藏成就",
+            AchievementCategory.COMBO to "🔗 组合成就"
+        )
+
+        for ((category, label) in categoryLabels) {
+            val categoryAchievements = uiState.achievements.filter { it.category == category }
+            if (categoryAchievements.isNotEmpty()) {
                 item {
-                    OverallProgress(
-                        unlockedCount = uiState.unlockedCount,
-                        totalCount = uiState.totalCount
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-
-                // Sections by category
-                val categoryLabels = mapOf(
-                    AchievementCategory.SKILL to "⚔️ 技能成就",
-                    AchievementCategory.STREAK to "🔥 连续打卡",
-                    AchievementCategory.COLLECTION to "⭐ 收藏成就",
-                    AchievementCategory.COMBO to "🔗 组合成就"
-                )
-
-                for ((category, label) in categoryLabels) {
-                    val categoryAchievements = uiState.achievements.filter { it.category == category }
-                    if (categoryAchievements.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                        items(
-                            items = categoryAchievements,
-                            key = { it.id }
-                        ) { achievement ->
-                            AchievementCard(achievement = achievement)
-                        }
-                    }
+                items(
+                    items = categoryAchievements,
+                    key = { it.id }
+                ) { achievement ->
+                    AchievementCard(achievement = achievement)
                 }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
     }
@@ -238,14 +200,14 @@ private fun AchievementCard(
                 if (achievement.isUnlocked) {
                     Icon(
                         imageVector = Icons.Default.EmojiEvents,
-                        contentDescription = null,
+                        contentDescription = "已解锁",
                         modifier = Modifier.size(40.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Lock,
-                        contentDescription = null,
+                        contentDescription = "未解锁",
                         modifier = Modifier.size(32.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                     )

@@ -79,6 +79,7 @@ import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.ErrorState
 import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.components.ScrollToTopButton
+import com.lifeup.app.ui.components.StreakFlame
 import com.lifeup.app.ui.components.TodoItem
 import java.time.LocalTime
 
@@ -399,12 +400,7 @@ private fun TopBar(
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocalFireDepartment,
-                            contentDescription = null,
-                            tint = Color(0xFFFF6D00),
-                            modifier = Modifier.size(22.dp)
-                        )
+                        StreakFlame(streakCount = streakCount)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "$streakCount",

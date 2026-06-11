@@ -1,5 +1,7 @@
 package com.lifeup.app.ui.about
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -52,9 +55,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +68,7 @@ fun AboutScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("关于") },
+                title = { Text("ℹ️ 关于") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -76,7 +76,10 @@ fun AboutScreen(
                             contentDescription = "返回"
                         )
                     }
-                }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { innerPadding ->
@@ -85,7 +88,7 @@ fun AboutScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // App header
             item {
@@ -107,7 +110,7 @@ fun AboutScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.SportsEsports,
-                            contentDescription = null,
+                            contentDescription = "应用图标",
                             modifier = Modifier.size(44.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -196,7 +199,7 @@ fun AboutScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Person,
-                                contentDescription = null,
+                                contentDescription = "开发者",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -212,7 +215,7 @@ fun AboutScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Code,
-                                contentDescription = null,
+                                contentDescription = "GitHub",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -220,7 +223,7 @@ fun AboutScreen(
                         trailingContent = {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
+                                contentDescription = "进入",
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
@@ -286,7 +289,7 @@ fun AboutScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = null,
+                                contentDescription = "信息",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -358,7 +361,7 @@ private fun FeatureItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
             )
@@ -385,18 +388,18 @@ private fun AboutMenuItem(
         leadingContent = {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
         },
         trailingContent = {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "进入",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
         },
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent

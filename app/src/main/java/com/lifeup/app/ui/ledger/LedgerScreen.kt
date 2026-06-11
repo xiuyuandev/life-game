@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,9 +26,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -75,84 +72,51 @@ fun LedgerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("📒 时间账本") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                }
+    ScreenScaffold(
+        title = "📒 时间账本",
+        onNavigateBack = onNavigateBack
+    ) {
+        // Month selector
+        item {
+            MonthSelector(
+                displayMonth = uiState.displayMonth,
+                onPrevious = { viewModel.selectPreviousMonth() },
+                onNext = { viewModel.selectNextMonth() }
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+
+        // Monthly summary card
+        item {
+            MonthlySummaryCard(
+                summary = uiState.monthlySummary,
+                formatMinutes = { viewModel.formatMinutes(it) }
+            )
+        }
+
+        // Daily entries
+        if (uiState.groupedEntries.isEmpty()) {
+            item {
+                EmptyStateMessage(text = "该月暂无时间记录")
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Month selector
+            uiState.groupedEntries.forEach { (dateHeader, entries) ->
                 item {
-                    MonthSelector(
-                        displayMonth = uiState.displayMonth,
-                        onPrevious = { viewModel.selectPreviousMonth() },
-                        onNext = { viewModel.selectNextMonth() }
-                    )
-                }
-
-                // Monthly summary card
-                item {
-                    MonthlySummaryCard(
-                        summary = uiState.monthlySummary,
+                    DateHeader(
+                        date = dateHeader,
+                        totalMinutes = entries.sumOf { it.durationMinutes },
+                        netGold = entries.sumOf {
+                            if (it.recordType == RecordType.INVESTMENT) it.goldAmount else -it.goldAmount
+                        },
                         formatMinutes = { viewModel.formatMinutes(it) }
                     )
                 }
 
-                // Daily entries
-                if (uiState.groupedEntries.isEmpty()) {
-                    item {
-                        EmptyStateMessage(text = "该月暂无时间记录")
-                    }
-                } else {
-                    uiState.groupedEntries.forEach { (dateHeader, entries) ->
-                        item {
-                            DateHeader(
-                                date = dateHeader,
-                                totalMinutes = entries.sumOf { it.durationMinutes },
-                                netGold = entries.sumOf {
-                                    if (it.recordType == RecordType.INVESTMENT) it.goldAmount else -it.goldAmount
-                                },
-                                formatMinutes = { viewModel.formatMinutes(it) }
-                            )
-                        }
-
-                        items(
-                            items = entries,
-                            key = { "entry-${it.timestamp}-${it.skillName}" }
-                        ) { entry ->
-                            LedgerEntryItem(entry = entry)
-                        }
-                    }
+                items(
+                    items = entries,
+                    key = { "entry-${it.timestamp}-${it.skillName}" }
+                ) { entry ->
+                    LedgerEntryItem(entry = entry)
                 }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(72.dp)) }
             }
         }
     }

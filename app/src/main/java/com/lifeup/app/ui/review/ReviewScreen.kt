@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,10 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -94,134 +91,98 @@ fun ReviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("📊 柳比歇夫复盘") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                },
-                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+    ScreenScaffold(
+        title = "📊 柳比歇夫复盘",
+        onNavigateBack = onNavigateBack
+    ) {
+        // Date Selector
+        item {
+            DateSelector(
+                displayDate = uiState.displayDate,
+                onPreviousDay = { viewModel.selectPreviousDay() },
+                onNextDay = { viewModel.selectNextDay() },
+                selectedDate = uiState.selectedDate,
+                onDateSelected = { viewModel.selectDate(it) }
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+
+        // Daily Summary Card
+        item {
+            DailySummaryCard(
+                investmentMinutes = uiState.investmentMinutes,
+                consumptionMinutes = uiState.consumptionMinutes,
+                totalMinutes = uiState.totalMinutes,
+                investmentRatio = uiState.investmentRatio,
+                consumptionRatio = uiState.consumptionRatio,
+                streakCount = uiState.streakCount,
+                formatMinutes = { viewModel.formatMinutes(it) }
+            )
+        }
+
+        // Daily Insight Card
+        item {
+            DailyInsightCard(
+                investmentMinutes = uiState.investmentMinutes,
+                investmentToConsumptionRatio = uiState.investmentToConsumptionRatio,
+                mostFocusedSkill = uiState.mostFocusedSkill,
+                streakCount = uiState.streakCount,
+                formatMinutes = { viewModel.formatMinutes(it) }
+            )
+        }
+
+        // Timeline Section
+        item {
+            Text(
+                text = "⏱️ 时间线",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+            )
+        }
+
+        if (uiState.timeRecords.isEmpty()) {
+            item {
+                EmptyStateMessage(text = "这一天没有时间记录")
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Date Selector
-                item {
-                    DateSelector(
-                        displayDate = uiState.displayDate,
-                        onPreviousDay = { viewModel.selectPreviousDay() },
-                        onNextDay = { viewModel.selectNextDay() },
-                        selectedDate = uiState.selectedDate,
-                        onDateSelected = { viewModel.selectDate(it) }
-                    )
-                }
+            items(
+                items = uiState.timeRecords,
+                key = { it.id }
+            ) { record ->
+                val skill = uiState.skills.find { it.id == record.skillId }
+                TimelineItem(
+                    record = record,
+                    skillName = skill?.name ?: "未知技能",
+                    skillCategory = skill?.category,
+                    formatTime = { viewModel.formatTime(it) },
+                    formatMinutes = { viewModel.formatMinutes(it) }
+                )
+            }
+        }
 
-                // Daily Summary Card
-                item {
-                    DailySummaryCard(
-                        investmentMinutes = uiState.investmentMinutes,
-                        consumptionMinutes = uiState.consumptionMinutes,
-                        totalMinutes = uiState.totalMinutes,
-                        investmentRatio = uiState.investmentRatio,
-                        consumptionRatio = uiState.consumptionRatio,
-                        streakCount = uiState.streakCount,
-                        formatMinutes = { viewModel.formatMinutes(it) }
-                    )
-                }
+        // Skill Breakdown Section
+        if (uiState.skillBreakdowns.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "📈 技能分布",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
 
-                // Daily Insight Card
-                item {
-                    DailyInsightCard(
-                        investmentMinutes = uiState.investmentMinutes,
-                        investmentToConsumptionRatio = uiState.investmentToConsumptionRatio,
-                        mostFocusedSkill = uiState.mostFocusedSkill,
-                        streakCount = uiState.streakCount,
-                        formatMinutes = { viewModel.formatMinutes(it) }
-                    )
-                }
-
-                // Timeline Section
-                item {
-                    Text(
-                        text = "⏱️ 时间线",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                    )
-                }
-
-                if (uiState.timeRecords.isEmpty()) {
-                    item {
-                        EmptyStateMessage(text = "这一天没有时间记录")
-                    }
-                } else {
-                    items(
-                        items = uiState.timeRecords,
-                        key = { it.id }
-                    ) { record ->
-                        val skill = uiState.skills.find { it.id == record.skillId }
-                        TimelineItem(
-                            record = record,
-                            skillName = skill?.name ?: "未知技能",
-                            skillCategory = skill?.category,
-                            formatTime = { viewModel.formatTime(it) },
-                            formatMinutes = { viewModel.formatMinutes(it) }
-                        )
-                    }
-                }
-
-                // Skill Breakdown Section
-                if (uiState.skillBreakdowns.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "📈 技能分布",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                    }
-
-                    items(
-                        items = uiState.skillBreakdowns,
-                        key = { "breakdown-${it.skill.id}" }
-                    ) { breakdown ->
-                        SkillBreakdownItem(
-                            breakdown = breakdown,
-                            maxMinutes = uiState.skillBreakdowns.first().minutes,
-                            formatMinutes = { viewModel.formatMinutes(it) }
-                        )
-                    }
-                }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(72.dp)) }
+            items(
+                items = uiState.skillBreakdowns,
+                key = { "breakdown-${it.skill.id}" }
+            ) { breakdown ->
+                SkillBreakdownItem(
+                    breakdown = breakdown,
+                    maxMinutes = uiState.skillBreakdowns.first().minutes,
+                    formatMinutes = { viewModel.formatMinutes(it) }
+                )
             }
         }
     }
@@ -330,7 +291,7 @@ private fun DailySummaryCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.LocalFireDepartment,
-                            contentDescription = null,
+                            contentDescription = "连续打卡",
                             tint = Color(0xFFFF6D00),
                             modifier = Modifier.size(16.dp)
                         )

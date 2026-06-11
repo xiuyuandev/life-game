@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,12 +30,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -85,116 +82,83 @@ fun StatsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("📊 技能统计") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                }
+    ScreenScaffold(
+        title = "📊 技能统计",
+        onNavigateBack = onNavigateBack
+    ) {
+        // Period selector
+        item {
+            PeriodSelector(
+                selectedPeriod = uiState.period,
+                onPeriodSelected = { viewModel.selectPeriod(it) }
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+
+        // Period navigation
+        item {
+            PeriodNavigation(
+                displayRange = uiState.displayDateRange,
+                onPrevious = { viewModel.selectPreviousPeriod() },
+                onNext = { viewModel.selectNextPeriod() }
+            )
+        }
+
+        // Summary cards
+        item {
+            SummaryCardsRow(
+                totalInvestmentMinutes = uiState.totalInvestmentMinutes,
+                totalGoldEarned = uiState.totalGoldEarned,
+                totalSessions = uiState.totalSessions,
+                investmentTrend = uiState.investmentTrend,
+                trendPercentage = viewModel.getTrendPercentage(),
+                formatMinutes = { viewModel.formatMinutes(it) }
+            )
+        }
+
+        // Daily activity chart
+        if (uiState.dailyData.isNotEmpty()) {
+            item {
+                DailyActivityChartCard(
+                    dailyData = uiState.dailyData,
+                    period = uiState.period
+                )
+            }
+        }
+
+        // Category distribution
+        if (uiState.categoryDistribution.isNotEmpty()) {
+            item {
+                CategoryDistributionCard(
+                    distribution = uiState.categoryDistribution
+                )
+            }
+        }
+
+        // Skill breakdown
+        if (uiState.skillStats.isNotEmpty()) {
+            item {
+                Text(
+                    text = "📋 技能明细",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                )
+            }
+
+            items(
+                items = uiState.skillStats,
+                key = { "stat-${it.skill.id}" }
+            ) { stat ->
+                SkillStatItem(
+                    stat = stat,
+                    maxMinutes = uiState.skillStats.first().totalMinutes,
+                    formatMinutes = { viewModel.formatMinutes(it) }
+                )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Period selector
-                item {
-                    PeriodSelector(
-                        selectedPeriod = uiState.period,
-                        onPeriodSelected = { viewModel.selectPeriod(it) }
-                    )
-                }
-
-                // Period navigation
-                item {
-                    PeriodNavigation(
-                        displayRange = uiState.displayDateRange,
-                        onPrevious = { viewModel.selectPreviousPeriod() },
-                        onNext = { viewModel.selectNextPeriod() }
-                    )
-                }
-
-                // Summary cards
-                item {
-                    SummaryCardsRow(
-                        totalInvestmentMinutes = uiState.totalInvestmentMinutes,
-                        totalGoldEarned = uiState.totalGoldEarned,
-                        totalSessions = uiState.totalSessions,
-                        investmentTrend = uiState.investmentTrend,
-                        trendPercentage = viewModel.getTrendPercentage(),
-                        formatMinutes = { viewModel.formatMinutes(it) }
-                    )
-                }
-
-                // Daily activity chart
-                if (uiState.dailyData.isNotEmpty()) {
-                    item {
-                        DailyActivityChartCard(
-                            dailyData = uiState.dailyData,
-                            period = uiState.period
-                        )
-                    }
-                }
-
-                // Category distribution
-                if (uiState.categoryDistribution.isNotEmpty()) {
-                    item {
-                        CategoryDistributionCard(
-                            distribution = uiState.categoryDistribution
-                        )
-                    }
-                }
-
-                // Skill breakdown
-                if (uiState.skillStats.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = "📋 技能明细",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                        )
-                    }
-
-                    items(
-                        items = uiState.skillStats,
-                        key = { "stat-${it.skill.id}" }
-                    ) { stat ->
-                        SkillStatItem(
-                            stat = stat,
-                            maxMinutes = uiState.skillStats.first().totalMinutes,
-                            formatMinutes = { viewModel.formatMinutes(it) }
-                        )
-                    }
-                } else {
-                    item {
-                        EmptyStateMessage(text = "该时段暂无技能记录")
-                    }
-                }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(72.dp)) }
+            item {
+                EmptyStateMessage(text = "该时段暂无技能记录")
             }
         }
     }
@@ -335,7 +299,7 @@ private fun SummaryCard(
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                contentDescription = title,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )

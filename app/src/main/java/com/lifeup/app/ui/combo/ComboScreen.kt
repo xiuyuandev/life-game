@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +38,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,105 +82,78 @@ fun ComboScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("🔗 技能组合") },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                }
-            },
-            actions = {
-                IconButton(onClick = { viewModel.showCreateDialog() }) {
-                    Icon(Icons.Default.Add, contentDescription = "创建组合")
-                }
+    ScreenScaffold(
+        title = "🔗 技能组合",
+        onNavigateBack = onNavigateBack,
+        actions = {
+            IconButton(onClick = { viewModel.showCreateDialog() }) {
+                Icon(Icons.Default.Add, contentDescription = "创建组合")
             }
-        )
+        }
+    ) {
+        // Active Combos section
+        item {
+            Text(
+                text = "🔗 我的组合",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        if (uiState.combos.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "🔗 还没有组合，从推荐中创建吧",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 16.dp,
-                    vertical = 8.dp
+            items(
+                items = uiState.combos,
+                key = { it.id }
+            ) { combo ->
+                val primarySkill = uiState.skills.find { it.id == combo.primarySkillId }
+                val secondarySkill = uiState.skills.find { it.id == combo.secondarySkillId }
+
+                ComboCard(
+                    combo = combo,
+                    primarySkill = primarySkill,
+                    secondarySkill = secondarySkill,
+                    onToggleActive = { viewModel.toggleComboActive(combo.id) },
+                    onDelete = { viewModel.deleteCombo(combo.id) }
                 )
-            ) {
-                // Active Combos section
-                item {
-                    Text(
-                        text = "🔗 我的组合",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                if (uiState.combos.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "🔗 还没有组合，从推荐中创建吧",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
-                } else {
-                    items(
-                        items = uiState.combos,
-                        key = { it.id }
-                    ) { combo ->
-                        val primarySkill = uiState.skills.find { it.id == combo.primarySkillId }
-                        val secondarySkill = uiState.skills.find { it.id == combo.secondarySkillId }
-
-                        ComboCard(
-                            combo = combo,
-                            primarySkill = primarySkill,
-                            secondarySkill = secondarySkill,
-                            onToggleActive = { viewModel.toggleComboActive(combo.id) },
-                            onDelete = { viewModel.deleteCombo(combo.id) }
-                        )
-                    }
-                }
-
-                // Recommended Combos section
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "💡 推荐组合",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                items(
-                    items = uiState.recommendedCombos,
-                    key = { it.name }
-                ) { recommended ->
-                    RecommendedComboCard(
-                        recommended = recommended,
-                        skills = uiState.skills,
-                        onCreateClick = { viewModel.showCreateDialogWithRecommendation(recommended) }
-                    )
-                }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(72.dp)) }
             }
+        }
+
+        // Recommended Combos section
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "💡 推荐组合",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        items(
+            items = uiState.recommendedCombos,
+            key = { it.name }
+        ) { recommended ->
+            RecommendedComboCard(
+                recommended = recommended,
+                skills = uiState.skills,
+                onCreateClick = { viewModel.showCreateDialogWithRecommendation(recommended) }
+            )
         }
     }
 

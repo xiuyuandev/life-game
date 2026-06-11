@@ -59,39 +59,50 @@ class CharacterViewModel @Inject constructor(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            characterStateRepository.initializeIfNeeded()
+            try {
+                characterStateRepository.initializeIfNeeded()
+            } catch (_: Exception) {
+            }
 
-            combine(
-                characterStateRepository.getCharacterState(),
-                skillRepository.getActiveSkills(),
-                itemRepository.getEquippedItems(),
-                itemRepository.getUnlockedItems(),
-                settingsPrefs.getOutfitPresets()
-            ) { characterState, skills, equippedItems, unlockedItems, presets ->
-                val attributes = calculateAttributes(skills, equippedItems)
-                val backpackItems = unlockedItems.filter { !it.isEquipped }
-                val totalAttributeBonus = equippedItems.sumOf { it.attributeBonus }
-                val outfitName = if (equippedItems.isNotEmpty()) {
-                    equippedItems.joinToString(" + ") { it.name }
-                } else {
-                    "默认装束"
-                }
+            try {
+                combine(
+                    characterStateRepository.getCharacterState(),
+                    skillRepository.getActiveSkills(),
+                    itemRepository.getEquippedItems(),
+                    itemRepository.getUnlockedItems(),
+                    settingsPrefs.getOutfitPresets()
+                ) { characterState, skills, equippedItems, unlockedItems, presets ->
+                    val attributes = try {
+                        calculateAttributes(skills, equippedItems)
+                    } catch (_: Exception) {
+                        emptyMap()
+                    }
+                    val backpackItems = unlockedItems.filter { !it.isEquipped }
+                    val totalAttributeBonus = equippedItems.sumOf { it.attributeBonus }
+                    val outfitName = if (equippedItems.isNotEmpty()) {
+                        equippedItems.joinToString(" + ") { it.name }
+                    } else {
+                        "默认装束"
+                    }
 
-                _uiState.update {
-                    it.copy(
-                        characterLevel = characterState.characterLevel,
-                        totalExp = characterState.totalExp,
-                        attributes = attributes,
-                        equippedItems = equippedItems,
-                        backpackItems = backpackItems,
-                        title = characterState.title,
-                        isLoading = false,
-                        outfitPresets = presets,
-                        totalAttributeBonus = totalAttributeBonus,
-                        outfitName = outfitName
-                    )
-                }
-            }.collect { }
+                    _uiState.update {
+                        it.copy(
+                            characterLevel = characterState.characterLevel,
+                            totalExp = characterState.totalExp,
+                            attributes = attributes,
+                            equippedItems = equippedItems,
+                            backpackItems = backpackItems,
+                            title = characterState.title,
+                            isLoading = false,
+                            outfitPresets = presets,
+                            totalAttributeBonus = totalAttributeBonus,
+                            outfitName = outfitName
+                        )
+                    }
+                }.collect { }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 
@@ -99,102 +110,121 @@ class CharacterViewModel @Inject constructor(
         skills: List<com.lifeup.app.domain.model.Skill>,
         equippedItems: List<Item>
     ): Map<String, Int> {
-        val baseMap = BoundAttribute.entries.associate { attr ->
-            attr.name to skills
-                .filter { it.boundAttribute == attr }
-                .sumOf { it.getAttributeBonus() }
+        return try {
+            val baseMap = BoundAttribute.entries.associate { attr ->
+                attr.name to skills
+                    .filter { it.boundAttribute == attr }
+                    .sumOf { it.getAttributeBonus() }
+            }
+
+            val itemBonus = equippedItems.sumOf { it.attributeBonus }
+
+            val endurance = AttributeCalculator.calculateEndurance(
+                maxStreak = dailyStateRepository.getLatestStreak() ?: 0,
+                activeSkillCount = skills.size
+            )
+
+            val luck = (baseMap.values.sum() / 7) + itemBonus / 2
+
+            baseMap + mapOf(
+                "ENDURANCE" to endurance,
+                "LUCK" to luck
+            )
+        } catch (_: Exception) {
+            emptyMap()
         }
-
-        val itemBonus = equippedItems.sumOf { it.attributeBonus }
-
-        val endurance = AttributeCalculator.calculateEndurance(
-            maxStreak = dailyStateRepository.getLatestStreak() ?: 0,
-            activeSkillCount = skills.size
-        )
-
-        val luck = (baseMap.values.sum() / 7) + itemBonus / 2
-
-        return baseMap + mapOf(
-            "ENDURANCE" to endurance,
-            "LUCK" to luck
-        )
     }
 
     fun equipItem(item: Item) {
         viewModelScope.launch {
-            val updated = item.copy(
-                isEquipped = true,
-                equippedSlot = item.slotType.name
-            )
-            itemRepository.updateItem(updated)
+            try {
+                val updated = item.copy(
+                    isEquipped = true,
+                    equippedSlot = item.slotType.name
+                )
+                itemRepository.updateItem(updated)
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun unequipItem(item: Item) {
         viewModelScope.launch {
-            val updated = item.copy(
-                isEquipped = false,
-                equippedSlot = null
-            )
-            itemRepository.updateItem(updated)
+            try {
+                val updated = item.copy(
+                    isEquipped = false,
+                    equippedSlot = null
+                )
+                itemRepository.updateItem(updated)
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun savePreset(name: String) {
         viewModelScope.launch {
-            val currentPresets = _uiState.value.outfitPresets
-            if (currentPresets.size >= 5) return@launch
+            try {
+                val currentPresets = _uiState.value.outfitPresets
+                if (currentPresets.size >= 5) return@launch
 
-            val equipped = _uiState.value.equippedItems
-            val newId = (currentPresets.maxOfOrNull { it.id } ?: 0) + 1
-            val preset = OutfitPreset(
-                id = newId,
-                name = name,
-                headItemId = equipped.find { it.slotType == SlotType.HEAD }?.id,
-                bodyItemId = equipped.find { it.slotType == SlotType.BODY }?.id,
-                handsItemId = equipped.find { it.slotType == SlotType.HANDS }?.id,
-                feetItemId = equipped.find { it.slotType == SlotType.FEET }?.id,
-                accessoryItemId = equipped.find { it.slotType == SlotType.ACCESSORY }?.id
-            )
-            settingsPrefs.saveOutfitPresets(currentPresets + preset)
+                val equipped = _uiState.value.equippedItems
+                val newId = (currentPresets.maxOfOrNull { it.id } ?: 0) + 1
+                val preset = OutfitPreset(
+                    id = newId,
+                    name = name,
+                    headItemId = equipped.find { it.slotType == SlotType.HEAD }?.id,
+                    bodyItemId = equipped.find { it.slotType == SlotType.BODY }?.id,
+                    handsItemId = equipped.find { it.slotType == SlotType.HANDS }?.id,
+                    feetItemId = equipped.find { it.slotType == SlotType.FEET }?.id,
+                    accessoryItemId = equipped.find { it.slotType == SlotType.ACCESSORY }?.id
+                )
+                settingsPrefs.saveOutfitPresets(currentPresets + preset)
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun applyPreset(preset: OutfitPreset) {
         viewModelScope.launch {
-            _uiState.value.equippedItems.forEach { item ->
-                val updated = item.copy(isEquipped = false, equippedSlot = null)
-                itemRepository.updateItem(updated)
-            }
+            try {
+                _uiState.value.equippedItems.forEach { item ->
+                    val updated = item.copy(isEquipped = false, equippedSlot = null)
+                    itemRepository.updateItem(updated)
+                }
 
-            val allItems = _uiState.value.equippedItems + _uiState.value.backpackItems
-            val slotItemIdMap = mapOf(
-                SlotType.HEAD to preset.headItemId,
-                SlotType.BODY to preset.bodyItemId,
-                SlotType.HANDS to preset.handsItemId,
-                SlotType.FEET to preset.feetItemId,
-                SlotType.ACCESSORY to preset.accessoryItemId
-            )
+                val allItems = _uiState.value.equippedItems + _uiState.value.backpackItems
+                val slotItemIdMap = mapOf(
+                    SlotType.HEAD to preset.headItemId,
+                    SlotType.BODY to preset.bodyItemId,
+                    SlotType.HANDS to preset.handsItemId,
+                    SlotType.FEET to preset.feetItemId,
+                    SlotType.ACCESSORY to preset.accessoryItemId
+                )
 
-            slotItemIdMap.forEach { (slotType, itemId) ->
-                if (itemId != null) {
-                    val item = allItems.find { it.id == itemId }
-                    if (item != null) {
-                        val updated = item.copy(
-                            isEquipped = true,
-                            equippedSlot = slotType.name
-                        )
-                        itemRepository.updateItem(updated)
+                slotItemIdMap.forEach { (slotType, itemId) ->
+                    if (itemId != null) {
+                        val item = allItems.find { it.id == itemId }
+                        if (item != null) {
+                            val updated = item.copy(
+                                isEquipped = true,
+                                equippedSlot = slotType.name
+                            )
+                            itemRepository.updateItem(updated)
+                        }
                     }
                 }
+            } catch (_: Exception) {
             }
         }
     }
 
     fun deletePreset(presetId: Long) {
         viewModelScope.launch {
-            val updated = _uiState.value.outfitPresets.filter { it.id != presetId }
-            settingsPrefs.saveOutfitPresets(updated)
+            try {
+                val updated = _uiState.value.outfitPresets.filter { it.id != presetId }
+                settingsPrefs.saveOutfitPresets(updated)
+            } catch (_: Exception) {
+            }
         }
     }
 }

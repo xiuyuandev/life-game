@@ -72,6 +72,7 @@ import com.lifeup.app.domain.game.TimerResult
 import com.lifeup.app.service.TimerManager
 import com.lifeup.app.ui.components.ConfettiAnimation
 import com.lifeup.app.ui.components.HapticFeedbackHelper
+import com.lifeup.app.ui.components.LevelUpAnimation
 import com.lifeup.app.ui.theme.MonospaceFontFamily
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +85,7 @@ fun TimerScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showConfetti by remember { mutableStateOf(false) }
+    var showLevelUp by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         TimerManager.bindService(context)
@@ -142,7 +144,7 @@ fun TimerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -283,6 +285,7 @@ fun TimerScreen(
         LaunchedEffect(result) {
             if (result.leveledUp) {
                 showConfetti = true
+                showLevelUp = true
             }
         }
         TimerSettlementSheet(
@@ -296,6 +299,15 @@ fun TimerScreen(
         ConfettiAnimation(
             modifier = Modifier.fillMaxSize(),
             onComplete = { showConfetti = false }
+        )
+    }
+
+    if (showLevelUp) {
+        val result = uiState.settlementResult!!
+        LevelUpAnimation(
+            newLevel = result.newLevel,
+            modifier = Modifier.fillMaxSize(),
+            onComplete = { showLevelUp = false }
         )
     }
 }

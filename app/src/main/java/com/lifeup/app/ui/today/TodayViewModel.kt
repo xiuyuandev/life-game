@@ -61,44 +61,55 @@ class TodayViewModel @Inject constructor(
 
     private fun loadTip() {
         viewModelScope.launch {
-            val earliestCreatedAt = skillRepository.getEarliestCreatedAt()
-            if (earliestCreatedAt == null || earliestCreatedAt == 0L) {
+            try {
+                val earliestCreatedAt = skillRepository.getEarliestCreatedAt()
+                if (earliestCreatedAt == null || earliestCreatedAt == 0L) {
+                    _uiState.update { it.copy(tip = null) }
+                    return@launch
+                }
+
+                val daysSinceStart = ((System.currentTimeMillis() - earliestCreatedAt) / (24 * 60 * 60 * 1000)).toInt() + 1
+                val dismissedTips = try {
+                    settingsPrefs.getDismissedTips().first()
+                } catch (_: Exception) {
+                    emptySet()
+                }
+
+                val tip = when {
+                    daysSinceStart in 1..2 -> TipContent(
+                        id = "tip_day_1_2",
+                        title = "新手提示",
+                        message = "试试开始计时吧！投资性时间会为你带来经验和金币"
+                    )
+                    daysSinceStart in 3..4 -> TipContent(
+                        id = "tip_day_3_4",
+                        title = "技能组合",
+                        message = "创建更多技能来解锁组合加成！跨分类技能组合可获得额外经验"
+                    )
+                    daysSinceStart in 5..7 -> TipContent(
+                        id = "tip_day_5_7",
+                        title = "坚持就是胜利",
+                        message = "坚持打卡可以获得连续天数加成，每天首次计时还有额外奖励"
+                    )
+                    else -> null
+                }
+
+                val finalTip = if (tip != null && tip.id !in dismissedTips) tip else null
+                _uiState.update { it.copy(tip = finalTip) }
+            } catch (_: Exception) {
                 _uiState.update { it.copy(tip = null) }
-                return@launch
             }
-
-            val daysSinceStart = ((System.currentTimeMillis() - earliestCreatedAt) / (24 * 60 * 60 * 1000)).toInt() + 1
-            val dismissedTips = settingsPrefs.getDismissedTips().first()
-
-            val tip = when {
-                daysSinceStart in 1..2 -> TipContent(
-                    id = "tip_day_1_2",
-                    title = "新手提示",
-                    message = "试试开始计时吧！投资性时间会为你带来经验和金币"
-                )
-                daysSinceStart in 3..4 -> TipContent(
-                    id = "tip_day_3_4",
-                    title = "技能组合",
-                    message = "创建更多技能来解锁组合加成！跨分类技能组合可获得额外经验"
-                )
-                daysSinceStart in 5..7 -> TipContent(
-                    id = "tip_day_5_7",
-                    title = "坚持就是胜利",
-                    message = "坚持打卡可以获得连续天数加成，每天首次计时还有额外奖励"
-                )
-                else -> null
-            }
-
-            val finalTip = if (tip != null && tip.id !in dismissedTips) tip else null
-            _uiState.update { it.copy(tip = finalTip) }
         }
     }
 
     fun dismissTip() {
         val tipId = _uiState.value.tip?.id ?: return
         viewModelScope.launch {
-            settingsPrefs.dismissTip(tipId)
-            _uiState.update { it.copy(tip = null) }
+            try {
+                settingsPrefs.dismissTip(tipId)
+                _uiState.update { it.copy(tip = null) }
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -191,34 +202,41 @@ class TodayViewModel @Inject constructor(
 
     fun toggleTodo(id: Long) {
         viewModelScope.launch {
-            val currentHabits = _uiState.value.habits
-            val currentTodos = _uiState.value.todos
-            val allItems = currentHabits + currentTodos
-            val item = allItems.find { it.id == id } ?: return@launch
+            try {
+                val currentHabits = _uiState.value.habits
+                val currentTodos = _uiState.value.todos
+                val allItems = currentHabits + currentTodos
+                val item = allItems.find { it.id == id } ?: return@launch
 
-            val updated = item.copy(
-                isCompleted = !item.isCompleted,
-                completedAt = if (!item.isCompleted) System.currentTimeMillis() else null
-            )
-            todoRepository.updateTodo(updated)
-
-            // Apply energy cost and gold reward on completion
-            if (!item.isCompleted) {
-                val todayStr = dateFormat.format(Date())
-                val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
-                val state = dailyState ?: DailyState(date = todayStr)
-
-                val energyCost = if (item.isHabit) 5f else 0f
-                val goldReward = 2
-
-                dailyStateRepository.insertOrUpdateState(
-                    state.copy(
-                        energy = (state.energy - energyCost).coerceAtLeast(0f),
-                        goldEarned = state.goldEarned + goldReward,
-                        habitsCompleted = state.habitsCompleted + if (item.isHabit) 1 else 0,
-                        todosCompleted = state.todosCompleted + if (!item.isHabit) 1 else 0
-                    )
+                val updated = item.copy(
+                    isCompleted = !item.isCompleted,
+                    completedAt = if (!item.isCompleted) System.currentTimeMillis() else null
                 )
+                todoRepository.updateTodo(updated)
+
+                // Apply energy cost and gold reward on completion
+                if (!item.isCompleted) {
+                    val todayStr = dateFormat.format(Date())
+                    val dailyState = try {
+                        dailyStateRepository.getStateByDate(todayStr).first()
+                    } catch (_: Exception) {
+                        null
+                    }
+                    val state = dailyState ?: DailyState(date = todayStr)
+
+                    val energyCost = if (item.isHabit) 5f else 0f
+                    val goldReward = 2
+
+                    dailyStateRepository.insertOrUpdateState(
+                        state.copy(
+                            energy = (state.energy - energyCost).coerceAtLeast(0f),
+                            goldEarned = state.goldEarned + goldReward,
+                            habitsCompleted = state.habitsCompleted + if (item.isHabit) 1 else 0,
+                            todosCompleted = state.todosCompleted + if (!item.isHabit) 1 else 0
+                        )
+                    )
+                }
+            } catch (_: Exception) {
             }
         }
     }
@@ -232,45 +250,58 @@ class TodayViewModel @Inject constructor(
         if (title.isBlank()) return
 
         viewModelScope.launch {
-            val todayStr = dateFormat.format(Date())
-            val todo = Todo(
-                title = title.trim(),
-                isHabit = isHabit,
-                priority = priority,
-                linkedSkillId = linkedSkillId,
-                date = todayStr,
-                sortOrder = if (isHabit) {
-                    _uiState.value.habits.size
-                } else {
-                    _uiState.value.todos.size
-                }
-            )
-            todoRepository.insertTodo(todo)
+            try {
+                val todayStr = dateFormat.format(Date())
+                val todo = Todo(
+                    title = title.trim(),
+                    isHabit = isHabit,
+                    priority = priority,
+                    linkedSkillId = linkedSkillId,
+                    date = todayStr,
+                    sortOrder = if (isHabit) {
+                        _uiState.value.habits.size
+                    } else {
+                        _uiState.value.todos.size
+                    }
+                )
+                todoRepository.insertTodo(todo)
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun deleteTodo(id: Long) {
         viewModelScope.launch {
-            val currentHabits = _uiState.value.habits
-            val currentTodos = _uiState.value.todos
-            val allItems = currentHabits + currentTodos
-            val item = allItems.find { it.id == id } ?: return@launch
-            todoRepository.deleteTodo(item)
+            try {
+                val currentHabits = _uiState.value.habits
+                val currentTodos = _uiState.value.todos
+                val allItems = currentHabits + currentTodos
+                val item = allItems.find { it.id == id } ?: return@launch
+                todoRepository.deleteTodo(item)
+            } catch (_: Exception) {
+            }
         }
     }
 
     fun updateEnergy() {
         viewModelScope.launch {
-            val todayStr = dateFormat.format(Date())
-            val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
-            val state = dailyState ?: DailyState(date = todayStr)
-            val calculatedEnergy = calculateEnergy(_uiState.value.habits, _uiState.value.todos)
+            try {
+                val todayStr = dateFormat.format(Date())
+                val dailyState = try {
+                    dailyStateRepository.getStateByDate(todayStr).first()
+                } catch (_: Exception) {
+                    null
+                }
+                val state = dailyState ?: DailyState(date = todayStr)
+                val calculatedEnergy = calculateEnergy(_uiState.value.habits, _uiState.value.todos)
 
-            _uiState.update { it.copy(energy = calculatedEnergy, energyCap = state.energyCap) }
+                _uiState.update { it.copy(energy = calculatedEnergy, energyCap = state.energyCap) }
 
-            dailyStateRepository.insertOrUpdateState(
-                state.copy(energy = calculatedEnergy)
-            )
+                dailyStateRepository.insertOrUpdateState(
+                    state.copy(energy = calculatedEnergy)
+                )
+            } catch (_: Exception) {
+            }
         }
     }
 }

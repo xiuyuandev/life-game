@@ -11,12 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
@@ -32,17 +30,15 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,30 +89,18 @@ fun BackupScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("数据管理") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "返回"
-                        )
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+    ScreenScaffold(
+        title = "💾 数据管理",
+        onNavigateBack = onNavigateBack,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // 导出数据 card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -152,7 +136,7 @@ fun BackupScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Description,
-                                contentDescription = null,
+                                contentDescription = "导出JSON",
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                             if (uiState.isExporting) {
@@ -172,7 +156,7 @@ fun BackupScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.TableChart,
-                                contentDescription = null,
+                                contentDescription = "导出CSV",
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                             Text("导出CSV")
@@ -228,7 +212,7 @@ fun BackupScreen(
                         }
                         Icon(
                             imageVector = Icons.Default.Upload,
-                            contentDescription = null,
+                            contentDescription = "导入JSON",
                             modifier = Modifier.padding(end = 4.dp)
                         )
                         Text("导入JSON")
@@ -264,7 +248,7 @@ fun BackupScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.CloudUpload,
-                                contentDescription = null,
+                                contentDescription = "S3兼容存储",
                                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         },
@@ -286,7 +270,7 @@ fun BackupScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Storage,
-                                contentDescription = null,
+                                contentDescription = "WebDAV",
                                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         },
@@ -333,7 +317,7 @@ fun BackupScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Download,
-                                contentDescription = null,
+                                contentDescription = "上次备份",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
@@ -351,7 +335,7 @@ fun BackupScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = null,
+                                contentDescription = "记录总数",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
@@ -369,7 +353,7 @@ fun BackupScreen(
                         leadingContent = {
                             Icon(
                                 imageVector = Icons.Default.Storage,
-                                contentDescription = null,
+                                contentDescription = "数据库大小",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
@@ -378,7 +362,7 @@ fun BackupScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 

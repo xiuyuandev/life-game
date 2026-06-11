@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,9 +35,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import com.lifeup.app.ui.components.ScreenScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -75,85 +73,52 @@ fun ShowcaseScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("📖 技能图鉴") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    if (uiState.isReorderMode) {
-                        IconButton(onClick = { viewModel.exitReorderMode() }) {
-                            Icon(Icons.Default.Check, contentDescription = "完成排序")
-                        }
-                    } else {
-                        IconButton(onClick = { shareShowcase(context, viewModel) }) {
-                            Icon(Icons.Default.Share, contentDescription = "分享")
-                        }
-                    }
+    ScreenScaffold(
+        title = "📖 技能图鉴",
+        onNavigateBack = onNavigateBack,
+        actions = {
+            if (uiState.isReorderMode) {
+                IconButton(onClick = { viewModel.exitReorderMode() }) {
+                    Icon(Icons.Default.Check, contentDescription = "完成排序")
                 }
+            } else {
+                IconButton(onClick = { shareShowcase(context, viewModel) }) {
+                    Icon(Icons.Default.Share, contentDescription = "分享")
+                }
+            }
+        }
+    ) {
+        // Overview card
+        item {
+            OverviewCard(
+                totalSkills = uiState.showcaseSkills.size,
+                totalHours = uiState.showcaseSkills.sumOf { it.totalMinutes } / 60,
+                highestSkill = uiState.showcaseSkills.maxByOrNull { it.level }
             )
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    horizontal = 16.dp,
-                    vertical = 8.dp
-                )
-            ) {
-                // Overview card
-                item {
-                    OverviewCard(
-                        totalSkills = uiState.showcaseSkills.size,
-                        totalHours = uiState.showcaseSkills.sumOf { it.totalMinutes } / 60,
-                        highestSkill = uiState.showcaseSkills.maxByOrNull { it.level }
-                    )
-                }
 
-                // Hall sections
-                itemsIndexed(
-                    items = uiState.halls,
-                    key = { index, hall -> hall.category?.name ?: index }
-                ) { index, hall ->
-                    HallSection(
-                        hall = hall,
-                        isReorderMode = uiState.isReorderMode && uiState.reorderHallIndex == index,
-                        onSkillClick = { skillId ->
-                            if (!uiState.isReorderMode) {
-                                onNavigateToDetail(skillId)
-                            }
-                        },
-                        onSkillLongClick = { skillId ->
-                            if (!uiState.isReorderMode) {
-                                viewModel.enterReorderMode(index)
-                            }
-                        },
-                        onMoveUp = { skillId -> viewModel.moveSkillUp(skillId) },
-                        onMoveDown = { skillId -> viewModel.moveSkillDown(skillId) },
-                        onAddClick = onNavigateToCreateSkill
-                    )
-                }
-
-                // Bottom spacing
-                item { Spacer(modifier = Modifier.height(72.dp)) }
-            }
+        // Hall sections
+        itemsIndexed(
+            items = uiState.halls,
+            key = { index, hall -> hall.category?.name ?: index }
+        ) { index, hall ->
+            HallSection(
+                hall = hall,
+                isReorderMode = uiState.isReorderMode && uiState.reorderHallIndex == index,
+                onSkillClick = { skillId ->
+                    if (!uiState.isReorderMode) {
+                        onNavigateToDetail(skillId)
+                    }
+                },
+                onSkillLongClick = { skillId ->
+                    if (!uiState.isReorderMode) {
+                        viewModel.enterReorderMode(index)
+                    }
+                },
+                onMoveUp = { skillId -> viewModel.moveSkillUp(skillId) },
+                onMoveDown = { skillId -> viewModel.moveSkillDown(skillId) },
+                onAddClick = onNavigateToCreateSkill
+            )
         }
     }
 }
