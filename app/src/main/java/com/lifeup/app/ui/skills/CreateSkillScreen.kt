@@ -111,7 +111,7 @@ fun CreateSkillScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("创建技能") },
+                title = { Text("✨ 创建技能") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -133,7 +133,7 @@ fun CreateSkillScreen(
         ) {
             // Template quick-select
             Text(
-                text = "快速选择模板",
+                text = "📋 快速选择模板",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -159,12 +159,13 @@ fun CreateSkillScreen(
                 label = { Text("技能名称 *") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
                 isError = uiState.errorMessage != null && uiState.name.isBlank()
             )
 
             // Category selection
             Text(
-                text = "分类",
+                text = "📂 分类",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -208,7 +209,7 @@ fun CreateSkillScreen(
 
             // Bound attribute selection
             Text(
-                text = "绑定属性",
+                text = "🎯 绑定属性",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -245,7 +246,7 @@ fun CreateSkillScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "自定义升级阈值",
+                    text = "⚙️ 自定义升级阈值",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -259,6 +260,8 @@ fun CreateSkillScreen(
             if (uiState.customThresholdsEnabled) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                     )
@@ -270,7 +273,7 @@ fun CreateSkillScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "升级所需小时数",
+                            text = "📝 升级所需小时数",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -285,6 +288,8 @@ fun CreateSkillScreen(
             // Energy cost info
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (uiState.energy < 2f) {
                         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
@@ -332,6 +337,7 @@ fun CreateSkillScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
                 enabled = uiState.canCreate && !uiState.isCreating,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -345,7 +351,7 @@ fun CreateSkillScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("创建技能")
+                    Text("✨ 创建技能")
                 }
             }
 
@@ -364,13 +370,13 @@ private fun SuggestionChip(
         modifier = Modifier
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
+            containerColor = color.copy(alpha = 0.12f)
         ),
-        border = CardDefaults.outlinedCardBorder(enabled = true),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Box(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
                 text = label,
@@ -411,6 +417,7 @@ private fun ThresholdInput(
             },
             singleLine = true,
             modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
             suffix = { Text("小时") }
         )
     }

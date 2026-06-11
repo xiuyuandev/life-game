@@ -78,7 +78,7 @@ fun LedgerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("时间账本") },
+                title = { Text("📒 时间账本") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -203,10 +203,11 @@ private fun MonthlySummaryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -214,7 +215,7 @@ private fun MonthlySummaryCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = "月度概览",
+                text = "📊 月度概览",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -378,9 +379,11 @@ private fun LedgerEntryItem(entry: LedgerEntry) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier

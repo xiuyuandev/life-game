@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CloudSync
@@ -30,7 +31,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -46,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -104,51 +106,63 @@ fun ProfileScreen(
             // Menu items
             item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "数据与统计",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                ) {
-                    ProfileMenuItem(
-                        icon = Icons.Default.ReceiptLong,
-                        title = "时间账本",
-                        onClick = onNavigateToLedger
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileMenuItem(
-                        icon = Icons.Default.Timeline,
-                        title = "柳比歇夫复盘",
-                        onClick = onNavigateToReview
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileMenuItem(
-                        icon = Icons.Default.QueryStats,
-                        title = "技能统计报告",
-                        onClick = onNavigateToStats
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "📊", style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "数据与统计",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
             item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column {
+                        ProfileMenuItem(
+                            icon = Icons.Default.ReceiptLong,
+                            title = "时间账本",
+                            onClick = onNavigateToLedger
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
+                            icon = Icons.Default.Timeline,
+                            title = "柳比歇夫复盘",
+                            onClick = onNavigateToReview
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
+                            icon = Icons.Default.QueryStats,
+                            title = "技能统计报告",
+                            onClick = onNavigateToStats
+                        )
+                    }
+                }
+            }
+
+            item {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "设置",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = "⚙️", style = MaterialTheme.typography.titleSmall)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "设置",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             item {
@@ -156,32 +170,36 @@ fun ProfileScreen(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
-                    )
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    ProfileMenuItem(
-                        icon = Icons.Default.CloudSync,
-                        title = "数据同步",
-                        onClick = onNavigateToBackup
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileMenuItem(
-                        icon = Icons.Default.DarkMode,
-                        title = "主题切换",
-                        subtitle = themeModeLabel(themeMode),
-                        onClick = { showThemeDialog = true }
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileMenuItem(
-                        icon = Icons.Default.Sync,
-                        title = "数据导出",
-                        onClick = onNavigateToBackup
-                    )
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ProfileMenuItem(
-                        icon = Icons.Default.Info,
-                        title = "关于",
-                        onClick = onNavigateToAbout
-                    )
+                    Column {
+                        ProfileMenuItem(
+                            icon = Icons.Default.CloudSync,
+                            title = "数据同步",
+                            onClick = onNavigateToBackup
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
+                            icon = Icons.Default.DarkMode,
+                            title = "主题切换",
+                            subtitle = themeModeLabel(themeMode),
+                            onClick = { showThemeDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
+                            icon = Icons.Default.Sync,
+                            title = "数据导出",
+                            onClick = onNavigateToBackup
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                        ProfileMenuItem(
+                            icon = Icons.Default.Info,
+                            title = "关于",
+                            onClick = onNavigateToAbout
+                        )
+                    }
                 }
             }
 
@@ -212,46 +230,70 @@ private fun ProfileHeader(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.05f)
+                        )
+                    )
+                )
         ) {
-            // Avatar placeholder
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
+                // Avatar with ring
+                Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(42.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(20.dp))
 
-            Column {
-                Text(
-                    text = "Lv.$characterLevel",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "累计 ${formatMinutes(totalTime)} · $skillCount 技能",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column {
+                    Text(
+                        text = "Lv.$characterLevel",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "累计 ${formatMinutes(totalTime)} · $skillCount 技能",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -271,21 +313,25 @@ private fun StatsCardsRow(
         StatCard(
             title = "累计时间",
             value = formatMinutes(totalTime),
+            emoji = "⏱",
             modifier = Modifier.weight(1f)
         )
         StatCard(
             title = "技能总数",
             value = "$skillCount",
+            emoji = "📖",
             modifier = Modifier.weight(1f)
         )
         StatCard(
             title = "最高等级",
             value = "Lv.$maxLevel",
+            emoji = "⭐",
             modifier = Modifier.weight(1f)
         )
         StatCard(
             title = "角色等级",
             value = "Lv.$characterLevel",
+            emoji = "🎮",
             modifier = Modifier.weight(1f)
         )
     }
@@ -295,13 +341,16 @@ private fun StatsCardsRow(
 private fun StatCard(
     title: String,
     value: String,
+    emoji: String = "",
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -309,6 +358,10 @@ private fun StatCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (emoji.isNotEmpty()) {
+                Text(text = emoji, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(2.dp))
+            }
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
@@ -319,7 +372,7 @@ private fun StatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
     }
@@ -336,7 +389,8 @@ private fun ProfileMenuItem(
         headlineContent = {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
             )
         },
         supportingContent = if (subtitle != null) {
@@ -352,16 +406,16 @@ private fun ProfileMenuItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                modifier = Modifier.size(22.dp)
             )
         },
         trailingContent = {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
         },
         colors = ListItemDefaults.colors(
@@ -396,7 +450,8 @@ private fun ThemeDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 4.dp)
+                            .clickable { onModeSelected(mode) },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(

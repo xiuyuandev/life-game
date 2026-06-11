@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -76,7 +77,7 @@ fun RetroactiveScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("补录时间") },
+                title = { Text("⏱️ 补录时间") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -146,6 +147,7 @@ fun RetroactiveScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
                     enabled = !uiState.isSaving && uiState.selectedSkillId != null,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -182,7 +184,7 @@ private fun SkillSelector(
 
     Column {
         Text(
-            text = "选择技能",
+            text = "⚔️ 选择技能",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -198,6 +200,7 @@ private fun SkillSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                shape = RoundedCornerShape(12.dp),
                 placeholder = { Text("请选择技能") },
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -232,36 +235,37 @@ private fun DatePickerField(
 
     Column {
         Text(
-            text = "选择日期",
+            text = "📅 选择日期",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedButton(
-            onClick = {
-                val parsedDate = try {
-                    storageFormat.parse(selectedDate)
-                } catch (e: Exception) {
-                    null
-                }
-                val cal = Calendar.getInstance().apply {
-                    if (parsedDate != null) time = parsedDate
-                }
-                DatePickerDialog(
-                    context,
-                    { _, year, month, dayOfMonth ->
-                        val newCal = Calendar.getInstance().apply {
-                            set(year, month, dayOfMonth)
-                        }
-                        onDateSelected(storageFormat.format(newCal.time))
-                    },
-                    cal.get(Calendar.YEAR),
-                    cal.get(Calendar.MONTH),
-                    cal.get(Calendar.DAY_OF_MONTH)
-                ).show()
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
+                onClick = {
+                    val parsedDate = try {
+                        storageFormat.parse(selectedDate)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val cal = Calendar.getInstance().apply {
+                        if (parsedDate != null) time = parsedDate
+                    }
+                    DatePickerDialog(
+                        context,
+                        { _, year, month, dayOfMonth ->
+                            val newCal = Calendar.getInstance().apply {
+                                set(year, month, dayOfMonth)
+                            }
+                            onDateSelected(storageFormat.format(newCal.time))
+                        },
+                        cal.get(Calendar.YEAR),
+                        cal.get(Calendar.MONTH),
+                        cal.get(Calendar.DAY_OF_MONTH)
+                    ).show()
+                },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
             Icon(
                 imageVector = Icons.Default.CalendarToday,
                 contentDescription = null,
@@ -288,7 +292,7 @@ private fun TimePickerField(
 
     Column {
         Text(
-            text = "开始时间",
+            text = "⏰ 开始时间",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -303,6 +307,7 @@ private fun TimePickerField(
                     true
                 ).show()
             },
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(
@@ -335,7 +340,7 @@ private fun DurationSlider(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "时长",
+                text = "⏱️ 时长",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -379,7 +384,7 @@ private fun RecordTypeToggle(
 ) {
     Column {
         Text(
-            text = "记录类型",
+            text = "📝 记录类型",
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

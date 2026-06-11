@@ -88,7 +88,7 @@ fun StatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("技能统计") },
+                title = { Text("📊 技能统计") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -169,7 +169,7 @@ fun StatsScreen(
                 if (uiState.skillStats.isNotEmpty()) {
                     item {
                         Text(
-                            text = "技能明细",
+                            text = "📋 技能明细",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -321,10 +321,11 @@ private fun SummaryCard(
 ) {
     Card(
         modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -389,10 +390,11 @@ private fun DailyActivityChartCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -400,7 +402,7 @@ private fun DailyActivityChartCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = "每日活动",
+                text = "📈 每日活动",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -506,10 +508,11 @@ private fun CategoryDistributionCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -517,7 +520,7 @@ private fun CategoryDistributionCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = "分类分布",
+                text = "🍩 分类分布",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -579,10 +582,11 @@ private fun SkillStatItem(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier

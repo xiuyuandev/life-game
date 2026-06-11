@@ -1,6 +1,7 @@
 package com.lifeup.app.ui.skills
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -102,6 +105,17 @@ private val SkillCategory.displayName: String
         SkillCategory.ART -> "艺术"
     }
 
+private val SkillCategory.emoji: String
+    get() = when (this) {
+        SkillCategory.LIVELIHOOD -> "💼"
+        SkillCategory.SOCIAL -> "🤝"
+        SkillCategory.LANGUAGE -> "🗣️"
+        SkillCategory.LIFE -> "🏠"
+        SkillCategory.PHYSICAL -> "💪"
+        SkillCategory.MENTAL -> "🧠"
+        SkillCategory.ART -> "🎨"
+    }
+
 private val BoundAttribute.displayName: String
     get() = when (this) {
         BoundAttribute.STRENGTH -> "力量"
@@ -136,7 +150,7 @@ fun SkillDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("技能详情") },
+                title = { Text(uiState.skill?.name ?: "技能详情") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -144,7 +158,8 @@ fun SkillDetailScreen(
                             contentDescription = "返回"
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { innerPadding ->
@@ -205,16 +220,26 @@ fun SkillDetailScreen(
 
 @Composable
 private fun SkillHeader(skill: Skill) {
+    val categoryColor = skill.category.color
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.Transparent
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            categoryColor.copy(alpha = 0.1f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
+                )
                 .padding(16.dp)
         ) {
             Row(
@@ -260,19 +285,26 @@ private fun SkillHeader(skill: Skill) {
                     modifier = Modifier
                         .size(10.dp)
                         .clip(CircleShape)
-                        .background(skill.category.color)
+                        .background(categoryColor)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = skill.category.displayName,
+                    text = "${skill.category.emoji} ${skill.category.displayName}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "绑定属性: ${skill.boundAttribute.displayName}",
+                    text = skill.boundAttribute.displayName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -296,13 +328,15 @@ private fun SkillProgressSection(skill: Skill) {
     val totalHours = skill.totalMinutes / 60
     val totalMinutesRemainder = skill.totalMinutes % 60
     val progress = skill.getProgressToNextLevel()
+    val categoryColor = skill.category.color
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -318,16 +352,30 @@ private fun SkillProgressSection(skill: Skill) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            LinearProgressIndicator(
-                progress = { progress },
+            Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = skill.category.color,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                strokeCap = StrokeCap.Round
-            )
+                    .clip(RoundedCornerShape(4.dp))
+            ) {
+                // Track background
+                drawRoundRect(
+                    color = Color(0xFFE0E0E0),
+                    cornerRadius = CornerRadius(4.dp.toPx())
+                )
+                // Progress bar with gradient
+                val barWidth = size.width * progress
+                drawRoundRect(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            categoryColor,
+                            categoryColor.copy(alpha = 0.6f)
+                        )
+                    ),
+                    size = Size(barWidth, size.height),
+                    cornerRadius = CornerRadius(4.dp.toPx())
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -362,7 +410,10 @@ private fun SkillActionButtons(
     ) {
         Button(
             onClick = onStartTimer,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
@@ -379,7 +430,8 @@ private fun SkillActionButtons(
         if (skill.status == SkillStatus.PAUSED) {
             OutlinedButton(
                 onClick = onResume,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
@@ -392,7 +444,8 @@ private fun SkillActionButtons(
         } else {
             OutlinedButton(
                 onClick = onPause,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Pause,
@@ -407,6 +460,7 @@ private fun SkillActionButtons(
         OutlinedButton(
             onClick = onArchive,
             modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error
             )
@@ -432,10 +486,11 @@ private fun StatsSection(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -443,7 +498,7 @@ private fun StatsSection(
                 .padding(16.dp)
         ) {
             Text(
-                text = "统计",
+                text = "📊 统计",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -452,7 +507,7 @@ private fun StatsSection(
             Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text = "7日频率",
+                text = "📅 7日频率",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -467,7 +522,7 @@ private fun StatsSection(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "成长曲线",
+                text = "📈 成长曲线",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -703,10 +758,11 @@ private fun TimeRecordsSection(timeRecords: List<TimeRecord>) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier

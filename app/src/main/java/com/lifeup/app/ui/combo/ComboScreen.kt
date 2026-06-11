@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -84,7 +85,7 @@ fun ComboScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text("技能组合") },
+            title = { Text("🔗 技能组合") },
             navigationIcon = {
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -116,7 +117,7 @@ fun ComboScreen(
                 // Active Combos section
                 item {
                     Text(
-                        text = "我的组合",
+                        text = "🔗 我的组合",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -132,7 +133,7 @@ fun ComboScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "还没有组合，从推荐中创建吧",
+                                text = "🔗 还没有组合，从推荐中创建吧",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
@@ -160,7 +161,7 @@ fun ComboScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "推荐组合",
+                        text = "💡 推荐组合",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -210,6 +211,7 @@ private fun ComboCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (combo.isActive) {
                 MaterialTheme.colorScheme.surface
@@ -217,7 +219,7 @@ private fun ComboCard(
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -341,9 +343,11 @@ private fun RecommendedComboCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
@@ -404,6 +408,7 @@ private fun RecommendedComboCard(
             Button(
                 onClick = onCreateClick,
                 enabled = canCreate,
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)

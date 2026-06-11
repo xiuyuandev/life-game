@@ -97,7 +97,7 @@ fun ReviewScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("柳比歇夫复盘") },
+                title = { Text("📊 柳比歇夫复盘") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -105,7 +105,10 @@ fun ReviewScreen(
                             contentDescription = "返回"
                         )
                     }
-                }
+                },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
             )
         }
     ) { innerPadding ->
@@ -164,7 +167,7 @@ fun ReviewScreen(
                 // Timeline Section
                 item {
                     Text(
-                        text = "时间线",
+                        text = "⏱️ 时间线",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -197,7 +200,7 @@ fun ReviewScreen(
                     item {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "技能分布",
+                            text = "📈 技能分布",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -299,10 +302,11 @@ private fun DailySummaryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -315,7 +319,7 @@ private fun DailySummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "每日概览",
+                    text = "📋 每日概览",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -453,10 +457,11 @@ private fun DailyInsightCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -464,7 +469,7 @@ private fun DailyInsightCard(
                 .padding(16.dp)
         ) {
             Text(
-                text = "今日洞察",
+                text = "💡 今日洞察",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -566,9 +571,11 @@ private fun TimelineItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -658,9 +665,11 @@ private fun SkillBreakdownItem(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier

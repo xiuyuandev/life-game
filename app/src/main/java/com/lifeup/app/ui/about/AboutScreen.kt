@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -136,12 +137,14 @@ fun AboutScreen(
 
             // 核心特性
             item {
-                SectionTitle("核心特性")
+                SectionTitle("✨ 核心特性")
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
@@ -174,12 +177,14 @@ fun AboutScreen(
 
             // 开发者
             item {
-                SectionTitle("开发者")
+                SectionTitle("👨‍💻 开发者")
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
@@ -229,12 +234,14 @@ fun AboutScreen(
 
             // 法律
             item {
-                SectionTitle("法律")
+                SectionTitle("📜 法律")
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
@@ -255,12 +262,14 @@ fun AboutScreen(
 
             // 数据
             item {
-                SectionTitle("数据")
+                SectionTitle("💾 数据")
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
@@ -303,7 +312,10 @@ fun AboutScreen(
                 Text("本应用使用的开源库许可信息将在此展示。")
             },
             confirmButton = {
-                TextButton(onClick = { showOssDialog = false }) {
+                TextButton(
+                    onClick = { showOssDialog = false },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("确定")
                 }
             }

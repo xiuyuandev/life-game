@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -57,9 +59,8 @@ fun TimerSheet(
     var isPaused by remember { mutableStateOf(false) }
     var isRunning by remember { mutableStateOf(false) }
     var skillName by remember { mutableStateOf("") }
-    var recordTypeIndex by remember { mutableIntStateOf(0) } // 0 = 投资性, 1 = 消耗性
+    var recordTypeIndex by remember { mutableIntStateOf(0) }
 
-    // Collect timer state every second
     LaunchedEffect(Unit) {
         snapshotFlow { timerManager.elapsedSeconds.value }
             .distinctUntilChanged()
@@ -87,7 +88,8 @@ fun TimerSheet(
     ModalBottomSheet(
         onDismissRequest = { /* Don't dismiss while running */ },
         sheetState = sheetState,
-        modifier = modifier
+        modifier = modifier,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
@@ -112,8 +114,8 @@ fun TimerSheet(
                 text = timerManager.formatElapsedTime(elapsedSeconds),
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = MonospaceFontFamily,
-                    fontSize = 56.sp,
-                    lineHeight = 64.sp
+                    fontSize = 52.sp,
+                    lineHeight = 60.sp
                 ),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -164,7 +166,7 @@ fun TimerSheet(
                         }
                     },
                     modifier = Modifier.size(64.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
+                    shape = CircleShape,
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.primary
                     )
@@ -172,7 +174,7 @@ fun TimerSheet(
                     Icon(
                         imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                         contentDescription = if (isPaused) "继续" else "暂停",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
 
@@ -186,15 +188,19 @@ fun TimerSheet(
                         onStop(durationMinutes)
                     },
                     modifier = Modifier.size(64.dp),
-                    shape = MaterialTheme.shapes.extraLarge,
+                    shape = CircleShape,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 3.dp,
+                        pressedElevation = 6.dp
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Stop,
                         contentDescription = "停止",
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -64,7 +65,7 @@ fun AchievementScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("成就墙 ${uiState.unlockedCount}/${uiState.totalCount}")
+                    Text("🏆 成就墙 ${uiState.unlockedCount}/${uiState.totalCount}")
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -104,10 +105,10 @@ fun AchievementScreen(
 
                 // Sections by category
                 val categoryLabels = mapOf(
-                    AchievementCategory.SKILL to "技能成就",
-                    AchievementCategory.STREAK to "连续打卡",
-                    AchievementCategory.COLLECTION to "收藏成就",
-                    AchievementCategory.COMBO to "组合成就"
+                    AchievementCategory.SKILL to "⚔️ 技能成就",
+                    AchievementCategory.STREAK to "🔥 连续打卡",
+                    AchievementCategory.COLLECTION to "⭐ 收藏成就",
+                    AchievementCategory.COMBO to "🔗 组合成就"
                 )
 
                 for ((category, label) in categoryLabels) {
@@ -147,9 +148,11 @@ private fun OverallProgress(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -185,13 +188,15 @@ private fun AchievementCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (achievement.isUnlocked) {
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
             } else {
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             }
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier

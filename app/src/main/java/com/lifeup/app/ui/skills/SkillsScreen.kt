@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -20,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -51,11 +53,17 @@ fun SkillsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToCreateSkill,
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(16.dp),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 4.dp,
+                    hoveredElevation = 8.dp
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "创建技能"
+                    contentDescription = "创建技能",
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -98,9 +106,9 @@ fun SkillsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "还没有技能，创建你的第一个技能吧",
+                                text = "✨ 还没有技能，创建你的第一个技能吧",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                             )
                         }
                     }
@@ -143,31 +151,36 @@ private fun SkillsTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "技能图鉴",
+                text = "📖 技能图鉴",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            Row {
-                OutlinedButton(onClick = onNavigateToShowcase) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(
+                    onClick = onNavigateToShowcase,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.CollectionsBookmark,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("图鉴")
+                    Text("图鉴", style = MaterialTheme.typography.labelMedium)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                OutlinedButton(onClick = onNavigateToCombo) {
+                OutlinedButton(
+                    onClick = onNavigateToCombo,
+                    shape = RoundedCornerShape(10.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("技能组合")
+                    Text("技能组合", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -177,8 +190,10 @@ private fun SkillsTopBar(
                 .fillMaxWidth()
                 .padding(top = 8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-            )
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             EnergyBar(
                 current = energy,

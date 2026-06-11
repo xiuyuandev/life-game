@@ -64,8 +64,8 @@ fun OnboardingScreen(
         ) {
             Text(
                 text = "跳过",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
             )
         }
 
@@ -133,7 +133,7 @@ private fun Step1CreateSkill(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "创建你的第一个技能",
+            text = "✨ 创建你的第一个技能",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -143,7 +143,7 @@ private fun Step1CreateSkill(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "选择一个模板开始吧（免费创建，无需能量）",
+            text = "🎯 选择一个模板开始吧（免费创建，无需能量）",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -237,7 +237,7 @@ private fun Step2CompleteHabit(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "完成今天的第一个习惯",
+            text = "💪 完成今天的第一个习惯",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -247,7 +247,7 @@ private fun Step2CompleteHabit(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "养成好习惯，从一杯水开始",
+            text = "🌱 养成好习惯，从一杯水开始",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -261,7 +261,8 @@ private fun Step2CompleteHabit(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -280,14 +281,14 @@ private fun Step2CompleteHabit(
 
                 Column {
                     Text(
-                        text = "喝杯水",
+                        text = "💧 喝杯水",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "保持水分，简单又重要的好习惯",
+                        text = "保持水分，简单又重要的好习惯 💪",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -340,7 +341,7 @@ private fun Step3StartTimer(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "开始第一次计时",
+            text = "⏱️ 开始第一次计时",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -350,7 +351,7 @@ private fun Step3StartTimer(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "记录你的专注时间，让成长可见",
+            text = "🔥 记录你的专注时间，让成长可见",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -364,7 +365,8 @@ private fun Step3StartTimer(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             ),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -393,7 +395,7 @@ private fun Step3StartTimer(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "计时结束后将自动记录到你的技能",
+                    text = "⏳ 计时结束后将自动记录到你的技能",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -435,7 +437,7 @@ private fun PageIndicator(
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         repeat(totalPages) { index ->
@@ -443,14 +445,15 @@ private fun PageIndicator(
             val color = if (isSelected) {
                 MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
             }
-            val width = if (isSelected) 24.dp else 8.dp
+            val width = if (isSelected) 28.dp else 10.dp
+            val height = 10.dp
 
             Box(
                 modifier = Modifier
-                    .size(width = width, height = 8.dp)
-                    .clip(RoundedCornerShape(4.dp))
+                    .size(width = width, height = height)
+                    .clip(RoundedCornerShape(5.dp))
                     .background(color)
             )
         }

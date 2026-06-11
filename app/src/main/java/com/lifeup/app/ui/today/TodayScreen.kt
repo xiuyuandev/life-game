@@ -1,6 +1,12 @@
 package com.lifeup.app.ui.today
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +21,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -27,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -43,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.Priority
 import com.lifeup.app.ui.components.EnergyBar
 import com.lifeup.app.ui.components.TodoItem
-import com.lifeup.app.ui.today.TipCard
+import java.time.LocalTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,11 +81,17 @@ fun TodayScreen(
                     addAsHabit = false
                     showAddDialog = true
                 },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(16.dp),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 4.dp,
+                    hoveredElevation = 8.dp
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "添加待办"
+                    contentDescription = "添加待办",
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -96,9 +111,9 @@ fun TodayScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Top bar: title + date + streak
+                // Top bar: greeting + date + streak
                 item {
                     TopBar(
                         todayDate = uiState.todayDate,
@@ -107,8 +122,12 @@ fun TodayScreen(
                 }
 
                 // Tip card
-                if (uiState.tip != null) {
-                    item {
+                AnimatedVisibility(
+                    visible = uiState.tip != null,
+                    enter = fadeIn() + slideInVertically(),
+                    exit = fadeOut() + slideOutVertically()
+                ) {
+                    if (uiState.tip != null) {
                         TipCard(
                             tip = uiState.tip,
                             onDismiss = { viewModel.dismissTip() }
@@ -116,19 +135,34 @@ fun TodayScreen(
                     }
                 }
 
-                // Energy bar
+                // Energy bar card
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        )
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
-                        EnergyBar(
-                            current = uiState.energy,
-                            cap = uiState.energyCap,
-                            modifier = Modifier.padding(16.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                                            MaterialTheme.colorScheme.surface
+                                        )
+                                    )
+                                )
+                                .padding(16.dp)
+                        ) {
+                            EnergyBar(
+                                current = uiState.energy,
+                                cap = uiState.energyCap
+                            )
+                        }
                     }
                 }
 
@@ -136,6 +170,7 @@ fun TodayScreen(
                 item {
                     SectionHeader(
                         title = "习惯打卡",
+                        icon = "🔄",
                         onAddClick = {
                             addAsHabit = true
                             showAddDialog = true
@@ -145,7 +180,7 @@ fun TodayScreen(
 
                 if (uiState.habits.isEmpty()) {
                     item {
-                        EmptyStateMessage(text = "还没有习惯，添加一个吧")
+                        EmptyStateMessage(text = "还没有习惯，添加一个吧", icon = "🌱")
                     }
                 } else {
                     items(
@@ -167,6 +202,7 @@ fun TodayScreen(
                 item {
                     SectionHeader(
                         title = "今日待办",
+                        icon = "📋",
                         onAddClick = {
                             addAsHabit = false
                             showAddDialog = true
@@ -176,7 +212,7 @@ fun TodayScreen(
 
                 if (uiState.todos.isEmpty()) {
                     item {
-                        EmptyStateMessage(text = "今天没有待办")
+                        EmptyStateMessage(text = "今天没有待办", icon = "✨")
                     }
                 } else {
                     items(
@@ -229,6 +265,17 @@ private fun TopBar(
     todayDate: String,
     streakCount: Int
 ) {
+    val hour = LocalTime.now().hour
+    val greeting = when {
+        hour < 6 -> "夜深了"
+        hour < 9 -> "早安"
+        hour < 12 -> "上午好"
+        hour < 14 -> "中午好"
+        hour < 18 -> "下午好"
+        hour < 22 -> "晚上好"
+        else -> "夜深了"
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,7 +285,7 @@ private fun TopBar(
     ) {
         Column {
             Text(
-                text = "今日",
+                text = greeting,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -252,27 +299,46 @@ private fun TopBar(
 
         if (streakCount > 0) {
             Card(
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFF6D00).copy(alpha = 0.12f)
-                )
+                    containerColor = Color.Transparent
+                ),
+                border = BorderStroke(1.dp, Color(0xFFFF6D00).copy(alpha = 0.3f))
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color(0xFFFF6D00).copy(alpha = 0.08f),
+                                    Color(0xFFFF8A50).copy(alpha = 0.12f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.LocalFireDepartment,
-                        contentDescription = null,
-                        tint = Color(0xFFFF6D00),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "$streakCount",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF6D00)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = Color(0xFFFF6D00),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "$streakCount",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFF6D00)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                            text = "天连续",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF6D00).copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
         }
@@ -282,46 +348,59 @@ private fun TopBar(
 @Composable
 private fun SectionHeader(
     title: String,
+    icon: String = "",
     onAddClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon.isNotEmpty()) {
+                Text(text = icon, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
         TextButton(onClick = onAddClick) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(2.dp))
-            Text("添加")
+            Text("添加", style = MaterialTheme.typography.labelMedium)
         }
     }
 }
 
 @Composable
-private fun EmptyStateMessage(text: String) {
+private fun EmptyStateMessage(text: String, icon: String = "") {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon.isNotEmpty()) {
+                Text(text = icon, style = MaterialTheme.typography.bodyLarge)
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+        }
     }
 }
 
@@ -337,6 +416,7 @@ private fun QuickActionsRow(
         OutlinedButton(
             onClick = onRetroactiveClick,
             modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -353,6 +433,7 @@ private fun QuickActionsRow(
         Button(
             onClick = onStartTimerClick,
             modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary
             )
@@ -381,7 +462,8 @@ private fun AddTodoSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -403,7 +485,8 @@ private fun AddTodoSheet(
                     Text(if (isHabit) "习惯名称" else "待办名称")
                 },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
 
             // Priority selector
@@ -421,7 +504,7 @@ private fun AddTodoSheet(
                     val isSelected = selectedPriority == priority
                     val color = when (priority) {
                         Priority.HIGH -> Color(0xFFFF5252)
-                        Priority.MEDIUM -> Color(0xFFFFD740)
+                        Priority.MEDIUM -> Color(0xFFFFB300)
                         Priority.LOW -> Color(0xFF66BB6A)
                         Priority.NONE -> Color(0xFFBDBDBD)
                     }
@@ -436,7 +519,7 @@ private fun AddTodoSheet(
                         selected = isSelected,
                         onClick = { selectedPriority = priority },
                         label = { Text(label) },
-                        color = if (isSelected) color else MaterialTheme.colorScheme.onSurfaceVariant
+                        color = color
                     )
                 }
             }
@@ -453,7 +536,8 @@ private fun AddTodoSheet(
                     onClick = {
                         onConfirm(title, selectedPriority, null)
                     },
-                    enabled = title.isNotBlank()
+                    enabled = title.isNotBlank(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("确定")
                 }
@@ -469,7 +553,7 @@ private fun FilterChip(
     label: @Composable () -> Unit,
     color: Color
 ) {
-    val containerColor = if (selected) color.copy(alpha = 0.2f) else Color.Transparent
+    val containerColor = if (selected) color.copy(alpha = 0.15f) else Color.Transparent
     val borderColor = if (selected) color else MaterialTheme.colorScheme.outlineVariant
     val contentColor = if (selected) color else MaterialTheme.colorScheme.onSurfaceVariant
 
@@ -480,7 +564,8 @@ private fun FilterChip(
             contentColor = contentColor
         ),
         border = BorderStroke(1.dp, borderColor),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         label()
     }

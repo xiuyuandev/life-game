@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -113,13 +114,15 @@ fun BackupScreen(
             // 导出数据 card
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "导出数据",
+                        text = "📤 导出数据",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -138,6 +141,7 @@ fun BackupScreen(
                         OutlinedButton(
                             onClick = { viewModel.exportJson() },
                             enabled = !uiState.isExporting,
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
@@ -157,6 +161,7 @@ fun BackupScreen(
                         OutlinedButton(
                             onClick = { viewModel.exportCsv() },
                             enabled = !uiState.isExporting,
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
@@ -173,13 +178,15 @@ fun BackupScreen(
             // 导入数据 card
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "导入数据",
+                        text = "📥 导入数据",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -203,6 +210,7 @@ fun BackupScreen(
                             filePickerLauncher.launch(arrayOf("application/json", "*/*"))
                         },
                         enabled = !uiState.isImporting,
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (uiState.isImporting) {
@@ -225,13 +233,15 @@ fun BackupScreen(
             // 云端备份 card (disabled)
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "云端备份",
+                        text = "☁️ 云端备份",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -292,13 +302,15 @@ fun BackupScreen(
             // 备份信息 card
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "备份信息",
+                        text = "ℹ️ 备份信息",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -396,6 +408,7 @@ fun BackupScreen(
                         showImportConfirmDialog = false
                         pendingImportUri = null
                     },
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )

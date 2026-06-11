@@ -1,5 +1,8 @@
 package com.lifeup.app.ui.character
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.Delete
@@ -54,6 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -62,6 +70,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.ItemTier
@@ -78,16 +87,9 @@ fun CharacterScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Bottom sheet state for slot selection
     var selectedSlot by remember { mutableStateOf<SlotType?>(null) }
-
-    // Confirmation dialog state for unequip
     var unequipTarget by remember { mutableStateOf<Item?>(null) }
-
-    // Outfit preset bottom sheet state
     var showOutfitSheet by remember { mutableStateOf(false) }
-
-    // Save preset dialog state
     var showSavePresetDialog by remember { mutableStateOf(false) }
 
     if (uiState.isLoading) {
@@ -103,7 +105,6 @@ fun CharacterScreen(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Section 1: Character image area
             item {
                 CharacterHeader(
                     characterLevel = uiState.characterLevel,
@@ -115,12 +116,10 @@ fun CharacterScreen(
                 )
             }
 
-            // Section 2: Attributes
             item {
                 AttributesSection(attributes = uiState.attributes)
             }
 
-            // Section 3: Items & Backpack tabs
             item {
                 ItemsSection(
                     equippedItems = uiState.equippedItems,
@@ -131,11 +130,11 @@ fun CharacterScreen(
                 )
             }
 
-            // Section 3.5: Shop button
             item {
                 OutlinedButton(
                     onClick = onNavigateToShop,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.ShoppingCart,
@@ -147,18 +146,15 @@ fun CharacterScreen(
                 }
             }
 
-            // Section 4: Achievement wall
             item {
                 AchievementWallPreview(
                     onClick = onNavigateToAchievement
                 )
             }
 
-            // Bottom spacing
             item { Spacer(modifier = Modifier.height(72.dp)) }
         }
 
-        // Slot selection bottom sheet
         selectedSlot?.let { slot ->
             val availableItems = uiState.backpackItems.filter { it.slotType == slot }
             SlotSelectionBottomSheet(
@@ -172,7 +168,6 @@ fun CharacterScreen(
             )
         }
 
-        // Unequip confirmation dialog
         unequipTarget?.let { item ->
             AlertDialog(
                 onDismissRequest = { unequipTarget = null },
@@ -194,7 +189,6 @@ fun CharacterScreen(
             )
         }
 
-        // Outfit preset bottom sheet
         if (showOutfitSheet) {
             OutfitPresetBottomSheet(
                 presets = uiState.outfitPresets,
@@ -212,7 +206,6 @@ fun CharacterScreen(
             )
         }
 
-        // Save preset dialog
         if (showSavePresetDialog) {
             SavePresetDialog(
                 onConfirm = { name ->
@@ -237,125 +230,188 @@ private fun CharacterHeader(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Character avatar placeholder
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                            MaterialTheme.colorScheme.surface
+                        )
+                    )
                 )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Title
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Level
-            Text(
-                text = "Lv.$characterLevel",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Exp progress bar
-            val nextLevelExp = ((characterLevel + 1) * (characterLevel + 1) * 1000L)
-            val currentLevelExp = (characterLevel * characterLevel * 1000L)
-            val progress = if (nextLevelExp > currentLevelExp) {
-                ((totalExp - currentLevelExp).toFloat() / (nextLevelExp - currentLevelExp)).coerceIn(0f, 1f)
-            } else 0f
-
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(8.dp)
-                        .clip(MaterialTheme.shapes.small),
+                // Character avatar with ring
+                Box(
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Outer ring
+                    Canvas(modifier = Modifier.size(108.dp)) {
+                        val strokeWidth = 3.dp.toPx()
+                        drawCircle(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            radius = (size.minDimension - strokeWidth) / 2f,
+                            style = Stroke(width = strokeWidth)
+                        )
+                    }
+                    // Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(56.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Title with glow effect
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Level
                 Text(
-                    text = "$totalExp / $nextLevelExp EXP",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Outfit name and change button
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Checkroom,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = outfitName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+                    text = "Lv.$characterLevel",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                FilledTonalButton(
-                    onClick = onOutfitClick,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                // Exp progress bar
+                val nextLevelExp = ((characterLevel + 1) * (characterLevel + 1) * 1000L)
+                val currentLevelExp = (characterLevel * characterLevel * 1000L)
+                val progress = if (nextLevelExp > currentLevelExp) {
+                    ((totalExp - currentLevelExp).toFloat() / (nextLevelExp - currentLevelExp)).coerceIn(0f, 1f)
+                } else 0f
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = tween(600),
+                    label = "expProgress"
+                )
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                    ) {
+                        // Track
+                        drawRoundRect(
+                            color = Color.Black.copy(alpha = 0.06f),
+                            cornerRadius = CornerRadius(4.dp.toPx())
+                        )
+                        // Fill
+                        val fillWidth = size.width * animatedProgress
+                        if (fillWidth > 0f) {
+                            drawRoundRect(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        MaterialTheme.colorScheme.primary
+                                    ),
+                                    startX = 0f,
+                                    endX = fillWidth
+                                ),
+                                topLeft = Offset.Zero,
+                                size = Size(fillWidth, size.height),
+                                cornerRadius = CornerRadius(4.dp.toPx())
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = "换装",
-                        style = MaterialTheme.typography.labelMedium
+                        text = "$totalExp / $nextLevelExp EXP",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
 
-            // Total attribute bonus indicator
-            if (totalAttributeBonus > 0) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "装备加成 +$totalAttributeBonus",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Outfit name and change button
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Checkroom,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = outfitName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    FilledTonalButton(
+                        onClick = onOutfitClick,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "换装",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+
+                if (totalAttributeBonus > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "装备加成 +$totalAttributeBonus",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
     }
@@ -389,21 +445,44 @@ private fun AttributesSection(
         "LUCK" to Color(0xFFE040FB)
     )
 
+    val attributeEmojis = mapOf(
+        "STRENGTH" to "💪",
+        "INTELLIGENCE" to "🧠",
+        "CHARISMA" to "✨",
+        "PERCEPTION" to "👁",
+        "CREATIVITY" to "🎨",
+        "WILLPOWER" to "🔥",
+        "DEXTERITY" to "🎯",
+        "ENDURANCE" to "🛡",
+        "LUCK" to "🍀"
+    )
+
     Column {
-        Text(
-            text = "属性面板",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "📊",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "属性面板",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-            )
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -416,33 +495,61 @@ private fun AttributesSection(
                     val maxValue = 50
                     val progress = (value.toFloat() / maxValue).coerceIn(0f, 1f)
                     val color = attributeColors[key] ?: MaterialTheme.colorScheme.primary
+                    val emoji = attributeEmojis[key] ?: ""
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = progress,
+                        animationSpec = tween(600),
+                        label = "attr_$key"
+                    )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Emoji + Label
+                        Text(
+                            text = emoji,
+                            fontSize = 14.sp,
+                            modifier = Modifier.width(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
                         Text(
                             text = label,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.width(56.dp)
+                            modifier = Modifier.width(48.dp)
                         )
 
-                        Box(
+                        // Custom progress bar with gradient
+                        Canvas(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(8.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clip(RoundedCornerShape(4.dp))
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(progress)
-                                    .clip(MaterialTheme.shapes.small)
-                                    .background(color)
+                            // Track
+                            drawRoundRect(
+                                color = Color.Black.copy(alpha = 0.05f),
+                                cornerRadius = CornerRadius(4.dp.toPx())
                             )
+                            // Fill
+                            val fillWidth = size.width * animatedProgress
+                            if (fillWidth > 0f) {
+                                drawRoundRect(
+                                    brush = Brush.horizontalGradient(
+                                        colors = listOf(
+                                            color.copy(alpha = 0.5f),
+                                            color
+                                        ),
+                                        startX = 0f,
+                                        endX = fillWidth
+                                    ),
+                                    topLeft = Offset.Zero,
+                                    size = Size(fillWidth, size.height),
+                                    cornerRadius = CornerRadius(4.dp.toPx())
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))
@@ -452,7 +559,7 @@ private fun AttributesSection(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = color,
-                            modifier = Modifier.width(32.dp),
+                            modifier = Modifier.width(28.dp),
                             textAlign = TextAlign.End
                         )
                     }
@@ -475,12 +582,21 @@ private fun ItemsSection(
     val tabs = listOf("道具", "背包")
 
     Column {
-        Text(
-            text = "装备与道具",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "⚔",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "装备与道具",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -536,6 +652,14 @@ private fun EquippedItemsSection(
         SlotType.ACCESSORY to Icons.Default.EmojiEvents
     )
 
+    val slotEmojis = mapOf(
+        SlotType.HEAD to "👑",
+        SlotType.BODY to "🧥",
+        SlotType.HANDS to "🧤",
+        SlotType.FEET to "👢",
+        SlotType.ACCESSORY to "💍"
+    )
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -543,39 +667,33 @@ private fun EquippedItemsSection(
         SlotType.entries.forEach { slot ->
             val label = slotLabels[slot] ?: slot.name
             val icon = slotIcons[slot] ?: Icons.Default.Person
+            val emoji = slotEmojis[slot] ?: ""
             val equipped = equippedItems.find { it.slotType == slot }
 
             if (equipped != null) {
-                // Equipped slot with tier-colored border
                 val tierBorderColor = tierColor(equipped.itemTier)
                 Card(
                     onClick = { onUnequip(equipped) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
-                            width = 1.5.dp,
-                            color = tierBorderColor,
-                            shape = MaterialTheme.shapes.medium
+                            width = 1.dp,
+                            color = tierBorderColor.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(14.dp)
                         ),
                     colors = CardDefaults.cardColors(
-                        containerColor = tierBorderColor.copy(alpha = 0.12f)
-                    )
+                        containerColor = tierBorderColor.copy(alpha = 0.08f)
+                    ),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = tierBorderColor
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
+                        Text(text = emoji, fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = label,
@@ -592,7 +710,8 @@ private fun EquippedItemsSection(
                                 Text(
                                     text = "+${equipped.attributeBonus} 属性",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = tierBorderColor
+                                    color = tierBorderColor,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -600,50 +719,43 @@ private fun EquippedItemsSection(
                         Text(
                             text = "点击卸下",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
                 }
             } else {
-                // Empty slot with dashed border
-                val dashColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                val dashColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
                 Card(
                     onClick = { onSlotTap(slot) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .drawBehind {
                             val stroke = Stroke(
-                                width = 1.5.dp.toPx(),
+                                width = 1.dp.toPx(),
                                 pathEffect = PathEffect.dashPathEffect(
-                                    floatArrayOf(10f, 10f),
+                                    floatArrayOf(8f, 8f),
                                     0f
                                 )
                             )
                             drawRoundRect(
                                 color = dashColor,
-                                cornerRadius = CornerRadius(12.dp.toPx()),
+                                cornerRadius = CornerRadius(14.dp.toPx()),
                                 style = stroke
                             )
                         },
                     colors = CardDefaults.cardColors(
                         containerColor = Color.Transparent
-                    )
+                    ),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp),
+                            .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
+                        Text(text = emoji, fontSize = 20.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = label,
@@ -660,7 +772,7 @@ private fun EquippedItemsSection(
                         Text(
                             text = "点击装备",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                         )
                     }
                 }
@@ -683,7 +795,7 @@ private fun BackpackSection(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "背包空空如也",
+                text = "🎒 背包空空如也",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
@@ -698,9 +810,11 @@ private fun BackpackSection(
                 Card(
                     onClick = { onEquip(item) },
                     colors = CardDefaults.cardColors(
-                        containerColor = tierColor(item.itemTier).copy(alpha = 0.12f)
+                        containerColor = tierColor(item.itemTier).copy(alpha = 0.08f)
                     ),
-                    modifier = Modifier.width(160.dp)
+                    modifier = Modifier.width(160.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = CardDefaults.outlinedCardBorder(enabled = false)
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp)
@@ -721,7 +835,8 @@ private fun BackpackSection(
                             Text(
                                 text = "+${item.attributeBonus} 属性",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = tierColor(item.itemTier)
+                                color = tierColor(item.itemTier),
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -737,12 +852,21 @@ private fun AchievementWallPreview(
     onClick: () -> Unit
 ) {
     Column {
-        Text(
-            text = "成就墙",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "🏆",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "成就墙",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -750,8 +874,10 @@ private fun AchievementWallPreview(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
-            )
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -764,19 +890,19 @@ private fun AchievementWallPreview(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    repeat(8) { index ->
+                    repeat(8) { _ ->
                         Box(
                             modifier = Modifier
-                                .size(64.dp)
-                                .clip(MaterialTheme.shapes.medium)
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.EmojiEvents,
                                 contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                             )
                         }
                     }
@@ -785,7 +911,8 @@ private fun AchievementWallPreview(
                 Text(
                     text = "点击查看全部成就",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -804,7 +931,8 @@ private fun SlotSelectionBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -839,8 +967,9 @@ private fun SlotSelectionBottomSheet(
                         onClick = { onSelect(item) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = tierColor(item.itemTier).copy(alpha = 0.12f)
-                        )
+                            containerColor = tierColor(item.itemTier).copy(alpha = 0.08f)
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -899,7 +1028,8 @@ private fun OutfitPresetBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -954,7 +1084,8 @@ private fun OutfitPresetBottomSheet(
             } else {
                 presets.forEach { preset ->
                     Card(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier
@@ -984,7 +1115,8 @@ private fun OutfitPresetBottomSheet(
 
                             FilledTonalButton(
                                 onClick = { onApply(preset) },
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text("应用", style = MaterialTheme.typography.labelMedium)
                             }
@@ -1027,7 +1159,8 @@ private fun SavePresetDialog(
                 onValueChange = { presetName = it },
                 label = { Text("预设名称") },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
             )
         },
         confirmButton = {
