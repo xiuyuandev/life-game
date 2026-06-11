@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 data class CharacterUiState(
@@ -48,12 +49,15 @@ class CharacterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CharacterUiState())
     val uiState: StateFlow<CharacterUiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         loadCharacterData()
     }
 
     private fun loadCharacterData() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             characterStateRepository.initializeIfNeeded()
 

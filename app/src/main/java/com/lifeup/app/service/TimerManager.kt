@@ -90,12 +90,18 @@ object TimerManager {
         if (!isBound) return
         try {
             collectJob?.cancel()
+            collectJob = null
             context.unbindService(serviceConnection)
         } catch (_: Exception) {
             // Already unbound
         }
         isBound = false
         timerService = null
+    }
+
+    fun wasTimerRunningBeforeProcessDeath(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("timer_state", Context.MODE_PRIVATE)
+        return prefs.getBoolean("is_running", false)
     }
 
     fun startTimer(context: Context, skillId: Long, skillName: String) {

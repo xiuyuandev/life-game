@@ -35,7 +35,8 @@ data class CreateSkillUiState(
     val canCreate: Boolean = false,
     val isCreating: Boolean = false,
     val createSuccess: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val nameValidationError: String? = null
 )
 
 val SKILL_TEMPLATES = listOf(
@@ -125,11 +126,19 @@ class CreateSkillViewModel @Inject constructor(
     }
 
     fun updateName(name: String) {
+        val trimmed = name.trim()
+        val validationError = when {
+            trimmed.isEmpty() -> "技能名称不能为空"
+            trimmed.length > 20 -> "技能名称最多20个字符"
+            !trimmed.matches(Regex("^[\\u4e00-\\u9fa5a-zA-Z0-9 ]+$")) -> "名称不能包含特殊字符"
+            else -> null
+        }
         _uiState.update {
             it.copy(
                 name = name,
-                canCreate = name.isNotBlank() && it.energy >= 2f,
-                errorMessage = null
+                canCreate = validationError == null && trimmed.isNotBlank() && it.energy >= 2f,
+                errorMessage = null,
+                nameValidationError = validationError
             )
         }
     }
@@ -176,8 +185,15 @@ class CreateSkillViewModel @Inject constructor(
 
     fun createSkill() {
         val state = _uiState.value
-        if (state.name.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "请输入技能名称") }
+        val trimmed = state.name.trim()
+        val validationError = when {
+            trimmed.isEmpty() -> "请输入技能名称"
+            trimmed.length > 20 -> "技能名称最多20个字符"
+            !trimmed.matches(Regex("^[\\u4e00-\\u9fa5a-zA-Z0-9 ]+$")) -> "名称不能包含特殊字符"
+            else -> null
+        }
+        if (validationError != null) {
+            _uiState.update { it.copy(errorMessage = validationError, nameValidationError = validationError) }
             return
         }
         if (state.energy < 2f) {

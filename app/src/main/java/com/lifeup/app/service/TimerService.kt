@@ -67,6 +67,16 @@ class TimerService : Service() {
         getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     }
 
+    private val timerPrefs by lazy { getSharedPreferences("timer_state", Context.MODE_PRIVATE) }
+
+    companion object {
+        private const val PREFS_SKILL_ID = "skill_id"
+        private const val PREFS_SKILL_NAME = "skill_name"
+        private const val PREFS_START_TIME = "start_time"
+        private const val PREFS_IS_RUNNING = "is_running"
+        private const val PREFS_ELAPSED_SECONDS = "elapsed_seconds"
+    }
+
     inner class TimerBinder : Binder() {
         fun getService(): TimerService = this@TimerService
     }
@@ -74,6 +84,50 @@ class TimerService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        restoreTimerState()
+    }
+
+    private fun restoreTimerState() {
+        if (timerPrefs.getBoolean(PREFS_IS_RUNNING, false)) {
+            val skillId = timerPrefs.getLong(PREFS_SKILL_ID, 0L)
+            val skillName = timerPrefs.getString(PREFS_SKILL_NAME, "") ?: ""
+            val savedStartTime = timerPrefs.getLong(PREFS_START_TIME, 0L)
+            val savedElapsed = timerPrefs.getLong(PREFS_ELAPSED_SECONDS, 0L)
+            if (skillId != 0L && savedStartTime > 0L) {
+                _currentSkillId.value = skillId
+                _currentSkillName.value = skillName
+                _isRunning.value = true
+                _isPaused.value = false
+                accumulatedSeconds = savedElapsed
+                startTimeMs = savedStartTime
+                startForegroundWithNotification()
+                tickJob = serviceScope.launch {
+                    while (isActive) {
+                        delay(1000L)
+                        if (!_isPaused.value) {
+                            val elapsed = (System.currentTimeMillis() - startTimeMs) / 1000L
+                            _elapsedSeconds.value = accumulatedSeconds + elapsed
+                            updateNotification()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveTimerState() {
+        timerPrefs.edit().apply {
+            putLong(PREFS_SKILL_ID, _currentSkillId.value)
+            putString(PREFS_SKILL_NAME, _currentSkillName.value)
+            putLong(PREFS_START_TIME, startTimeMs)
+            putBoolean(PREFS_IS_RUNNING, _isRunning.value)
+            putLong(PREFS_ELAPSED_SECONDS, _elapsedSeconds.value)
+            apply()
+        }
+    }
+
+    private fun clearTimerState() {
+        timerPrefs.edit().clear().apply()
     }
 
     override fun onBind(intent: Intent?): IBinder {
@@ -113,6 +167,7 @@ class TimerService : Service() {
         startTimeMs = System.currentTimeMillis()
 
         startForegroundWithNotification()
+        saveTimerState()
 
         tickJob = serviceScope.launch {
             while (isActive) {
@@ -135,6 +190,7 @@ class TimerService : Service() {
         _elapsedSeconds.value = 0L
         accumulatedSeconds = 0L
 
+        clearTimerState()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
 
@@ -246,6 +302,7 @@ class TimerService : Service() {
         tickJob?.cancel()
         tickJob = null
         _isRunning.value = false
+        serviceScope.cancel()
         super.onDestroy()
     }
 }

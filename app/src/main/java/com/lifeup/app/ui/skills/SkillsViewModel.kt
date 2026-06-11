@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -42,6 +43,9 @@ class SkillsViewModel @Inject constructor(
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
+    private var skillsJob: Job? = null
+    private var energyJob: Job? = null
+
     init {
         loadActiveSkills()
         loadEnergy()
@@ -53,7 +57,8 @@ class SkillsViewModel @Inject constructor(
     }
 
     private fun loadActiveSkills(isRefresh: Boolean = false) {
-        viewModelScope.launch {
+        skillsJob?.cancel()
+        skillsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = !isRefresh, isRefreshing = isRefresh, error = null) }
             try {
                 skillRepository.getActiveSkills().collect { skills ->
@@ -66,7 +71,8 @@ class SkillsViewModel @Inject constructor(
     }
 
     private fun loadEnergy() {
-        viewModelScope.launch {
+        energyJob?.cancel()
+        energyJob = viewModelScope.launch {
             val todayStr = dateFormat.format(Date())
             try {
                 dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->

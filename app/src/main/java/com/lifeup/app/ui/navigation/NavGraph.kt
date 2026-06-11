@@ -38,42 +38,33 @@ fun LifeUpNavGraph(
     startDestination: String,
     modifier: Modifier = Modifier
 ) {
+    val enterTransition = fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+        AnimatedContentTransitionScope.SlideDirection.Start,
+        animationSpec = tween(300)
+    )
+    val exitTransition = fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+        AnimatedContentTransitionScope.SlideDirection.Start,
+        animationSpec = tween(300)
+    )
+    val popEnterTransition = fadeIn(animationSpec = tween(300)) + slideIntoContainer(
+        AnimatedContentTransitionScope.SlideDirection.End,
+        animationSpec = tween(300)
+    )
+    val popExitTransition = fadeOut(animationSpec = tween(300)) + slideOutOfContainer(
+        AnimatedContentTransitionScope.SlideDirection.End,
+        animationSpec = tween(300)
+    )
+
     NavHost(
         navController = navController,
         startDestination = startDestination,
         modifier = modifier,
-        enterTransition = {
-            slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(300)
-            ) + fadeIn(animationSpec = tween(300))
-        },
-        exitTransition = {
-            slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Left,
-                animationSpec = tween(300)
-            ) + fadeOut(animationSpec = tween(300))
-        },
-        popEnterTransition = {
-            slideIntoContainer(
-                AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(300)
-            ) + fadeIn(animationSpec = tween(300))
-        },
-        popExitTransition = {
-            slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Right,
-                animationSpec = tween(300)
-            ) + fadeOut(animationSpec = tween(300))
-        }
+        enterTransition = { enterTransition },
+        exitTransition = { exitTransition },
+        popEnterTransition = { popEnterTransition },
+        popExitTransition = { popExitTransition }
     ) {
-        composable(
-            Screen.Today.route,
-            enterTransition = { fadeIn(animationSpec = tween(250)) },
-            exitTransition = { fadeOut(animationSpec = tween(250)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
-            popExitTransition = { fadeOut(animationSpec = tween(250)) }
-        ) {
+        composable(Screen.Today.route) {
             TodayScreen(
                 onNavigateToTimer = { skillId ->
                     navController.navigate(Screen.Timer.createRoute(skillId))
@@ -87,13 +78,7 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(
-            Screen.Skills.route,
-            enterTransition = { fadeIn(animationSpec = tween(250)) },
-            exitTransition = { fadeOut(animationSpec = tween(250)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
-            popExitTransition = { fadeOut(animationSpec = tween(250)) }
-        ) {
+        composable(Screen.Skills.route) {
             SkillsScreen(
                 onNavigateToDetail = { skillId ->
                     navController.navigate(Screen.SkillDetail.createRoute(skillId))
@@ -135,13 +120,7 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(
-            Screen.Character.route,
-            enterTransition = { fadeIn(animationSpec = tween(250)) },
-            exitTransition = { fadeOut(animationSpec = tween(250)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
-            popExitTransition = { fadeOut(animationSpec = tween(250)) }
-        ) {
+        composable(Screen.Character.route) {
             CharacterScreen(
                 onNavigateToAchievement = {
                     navController.navigate(Screen.Achievement.route)
@@ -152,13 +131,7 @@ fun LifeUpNavGraph(
             )
         }
 
-        composable(
-            Screen.Profile.route,
-            enterTransition = { fadeIn(animationSpec = tween(250)) },
-            exitTransition = { fadeOut(animationSpec = tween(250)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(250)) },
-            popExitTransition = { fadeOut(animationSpec = tween(250)) }
-        ) {
+        composable(Screen.Profile.route) {
             ProfileScreen(
                 onNavigateToReview = { navController.navigate(Screen.Review.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },

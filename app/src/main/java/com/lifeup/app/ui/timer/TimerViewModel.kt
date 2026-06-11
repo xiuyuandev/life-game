@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import javax.inject.Inject
 
 data class TimerUiState(
@@ -58,6 +59,8 @@ class TimerViewModel @Inject constructor(
 
     private val timerManager = TimerManager
 
+    private var observeJob: Job? = null
+
     init {
         loadSkill()
         observeTimerState()
@@ -75,7 +78,8 @@ class TimerViewModel @Inject constructor(
     }
 
     private fun observeTimerState() {
-        viewModelScope.launch {
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
             combine(
                 timerManager.isRunning,
                 timerManager.elapsedSeconds,

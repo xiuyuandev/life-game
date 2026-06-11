@@ -48,7 +48,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,7 @@ import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.domain.game.TimerResult
 import com.lifeup.app.service.TimerManager
+import com.lifeup.app.ui.components.ConfettiAnimation
 import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.theme.MonospaceFontFamily
 
@@ -80,6 +83,7 @@ fun TimerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showConfetti by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         TimerManager.bindService(context)
@@ -275,10 +279,23 @@ fun TimerScreen(
 
     // Settlement sheet
     if (uiState.showSettlement && uiState.settlementResult != null) {
+        val result = uiState.settlementResult!!
+        LaunchedEffect(result) {
+            if (result.leveledUp) {
+                showConfetti = true
+            }
+        }
         TimerSettlementSheet(
-            result = uiState.settlementResult!!,
+            result = result,
             durationSeconds = uiState.elapsedSeconds,
             onDismiss = { viewModel.dismissSettlement() }
+        )
+    }
+
+    if (showConfetti) {
+        ConfettiAnimation(
+            modifier = Modifier.fillMaxSize(),
+            onComplete = { showConfetti = false }
         )
     }
 }

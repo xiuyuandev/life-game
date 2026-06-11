@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -50,6 +51,8 @@ class TodayViewModel @Inject constructor(
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     private val displayDateFormat = SimpleDateFormat("M月d日 EEEE", Locale.CHINESE)
+
+    private var loadJob: Job? = null
 
     init {
         loadTodayData()
@@ -107,7 +110,8 @@ class TodayViewModel @Inject constructor(
         val todayStr = dateFormat.format(Date())
         val displayDate = displayDateFormat.format(Date())
 
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     todayDate = displayDate,

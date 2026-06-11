@@ -33,7 +33,9 @@ data class RetroactiveUiState(
     val recordType: RecordType = RecordType.INVESTMENT,
     val isSaving: Boolean = false,
     val isSaved: Boolean = false,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val dateValidationError: String? = null,
+    val durationValidationError: String? = null
 )
 
 @HiltViewModel
@@ -76,7 +78,21 @@ class RetroactiveViewModel @Inject constructor(
     }
 
     fun selectDate(date: String) {
-        _uiState.update { it.copy(selectedDate = date) }
+        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val selected = try {
+            val parts = date.split("-")
+            Calendar.getInstance().apply {
+                set(Calendar.YEAR, parts[0].toInt())
+                set(Calendar.MONTH, parts[1].toInt() - 1)
+                set(Calendar.DAY_OF_MONTH, parts[2].toInt())
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        } catch (_: Exception) { null }
+        val error = if (selected != null && selected.after(today)) "不能选择未来日期" else null
+        _uiState.update { it.copy(selectedDate = date, dateValidationError = error) }
     }
 
     fun setStartTime(hour: Int, minute: Int) {
@@ -84,7 +100,12 @@ class RetroactiveViewModel @Inject constructor(
     }
 
     fun setDuration(minutes: Int) {
-        _uiState.update { it.copy(durationMinutes = minutes) }
+        val error = when {
+            minutes < 1 -> "时长至少1分钟"
+            minutes > 480 -> "时长最多480分钟（8小时）"
+            else -> null
+        }
+        _uiState.update { it.copy(durationMinutes = minutes, durationValidationError = error) }
     }
 
     fun toggleRecordType() {
@@ -103,6 +124,30 @@ class RetroactiveViewModel @Inject constructor(
         val state = _uiState.value
         val skillId = state.selectedSkillId ?: return
         if (state.selectedDate.isBlank()) return
+
+        val today = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val selected = try {
+            val parts = state.selectedDate.split("-")
+            Calendar.getInstance().apply {
+                set(Calendar.YEAR, parts[0].toInt())
+                set(Calendar.MONTH, parts[1].toInt() - 1)
+                set(Calendar.DAY_OF_MONTH, parts[2].toInt())
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+        } catch (_: Exception) { null }
+        val dateError = if (selected != null && selected.after(today)) "不能选择未来日期" else null
+        val durationError = when {
+            state.durationMinutes < 1 -> "时长至少1分钟"
+            state.durationMinutes > 480 -> "时长最多480分钟（8小时）"
+            else -> null
+        }
+        if (dateError != null || durationError != null) {
+            _uiState.update { it.copy(dateValidationError = dateError, durationValidationError = durationError) }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
