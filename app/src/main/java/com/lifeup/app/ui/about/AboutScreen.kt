@@ -59,7 +59,8 @@ import androidx.compose.foundation.clickable
 @Composable
 fun AboutScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToPrivacyPolicy: () -> Unit
+    onNavigateToPrivacyPolicy: () -> Unit,
+    onNavigateToBackup: () -> Unit = {}
 ) {
     var showOssDialog by remember { mutableStateOf(false) }
 
@@ -267,7 +268,7 @@ fun AboutScreen(
                     AboutMenuItem(
                         icon = Icons.Default.Storage,
                         title = "数据管理",
-                        onClick = { /* placeholder */ }
+                        onClick = onNavigateToBackup
                     )
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     ListItem(

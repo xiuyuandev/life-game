@@ -162,7 +162,7 @@ fun LifeUpNavGraph(
                 onNavigateToReview = { navController.navigate(Screen.Review.route) },
                 onNavigateToStats = { navController.navigate(Screen.Stats.route) },
                 onNavigateToLedger = { navController.navigate(Screen.Ledger.route) },
-                onNavigateToSettings = { /* placeholder */ },
+                onNavigateToSettings = { navController.navigate(Screen.About.route) },
                 onNavigateToBackup = { navController.navigate(Screen.Backup.route) },
                 onNavigateToAbout = { navController.navigate(Screen.About.route) }
             )
@@ -257,7 +257,8 @@ fun LifeUpNavGraph(
         composable(Screen.About.route) {
             AboutScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) }
+                onNavigateToPrivacyPolicy = { navController.navigate(Screen.PrivacyPolicy.route) },
+                onNavigateToBackup = { navController.navigate(Screen.Backup.route) }
             )
         }
 

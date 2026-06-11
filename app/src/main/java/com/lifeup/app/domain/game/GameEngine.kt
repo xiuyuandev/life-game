@@ -101,10 +101,12 @@ object GameEngine {
         val currentDailyState = dailyState ?: DailyState(date = today)
         val updatedDailyState = when (recordType) {
             RecordType.INVESTMENT -> currentDailyState.copy(
-                investmentMinutes = currentDailyState.investmentMinutes + durationMinutes
+                investmentMinutes = currentDailyState.investmentMinutes + durationMinutes,
+                goldEarned = currentDailyState.goldEarned + goldGained
             )
             RecordType.CONSUMPTION -> currentDailyState.copy(
-                consumptionMinutes = currentDailyState.consumptionMinutes + durationMinutes
+                consumptionMinutes = currentDailyState.consumptionMinutes + durationMinutes,
+                goldEarned = currentDailyState.goldEarned + goldGained
             )
         }
         dailyStateRepository.insertOrUpdateState(updatedDailyState)

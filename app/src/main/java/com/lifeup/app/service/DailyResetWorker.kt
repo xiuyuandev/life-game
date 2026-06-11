@@ -3,6 +3,7 @@ package com.lifeup.app.service
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -39,7 +40,11 @@ class DailyResetWorker @AssistedInject constructor(
             ).build()
 
             WorkManager.getInstance(context)
-                .enqueue(workRequest)
+                .enqueueUniquePeriodicWork(
+                    WORK_NAME,
+                    ExistingPeriodicWorkPolicy.KEEP,
+                    workRequest
+                )
         }
     }
 }

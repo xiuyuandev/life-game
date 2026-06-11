@@ -38,7 +38,8 @@ fun DailyStateEntity.toDomain(): DailyState {
         streakCount = streakCount,
         isFirstTimerUsed = isFirstTimerUsed,
         todosCompleted = todosCompleted,
-        habitsCompleted = habitsCompleted
+        habitsCompleted = habitsCompleted,
+        goldEarned = goldEarned
     )
 }
 
@@ -53,6 +54,7 @@ fun DailyState.toEntity(): DailyStateEntity {
         streakCount = streakCount,
         isFirstTimerUsed = isFirstTimerUsed,
         todosCompleted = todosCompleted,
-        habitsCompleted = habitsCompleted
+        habitsCompleted = habitsCompleted,
+        goldEarned = goldEarned
     )
 }

@@ -10,5 +10,6 @@ data class DailyState(
     val streakCount: Int = 0,
     val isFirstTimerUsed: Boolean = false,
     val todosCompleted: Int = 0,
-    val habitsCompleted: Int = 0
+    val habitsCompleted: Int = 0,
+    val goldEarned: Int = 0
 )

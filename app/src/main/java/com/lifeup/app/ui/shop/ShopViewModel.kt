@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.SlotType
 import com.lifeup.app.domain.model.Item
+import com.lifeup.app.domain.repository.GoldRepository
 import com.lifeup.app.domain.repository.ItemRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -83,7 +84,8 @@ val ITEM_TEMPLATES = listOf(
 @HiltViewModel
 class ShopViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
-    private val skillRepository: SkillRepository
+    private val skillRepository: SkillRepository,
+    private val goldRepository: GoldRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShopUiState())
@@ -99,12 +101,12 @@ class ShopViewModel @Inject constructor(
 
             combine(
                 itemRepository.getUnlockedItems(),
-                skillRepository.getActiveSkills()
-            ) { ownedItems, skills ->
-                Pair(ownedItems, skills)
-            }.collect { (ownedItems, skills) ->
+                skillRepository.getActiveSkills(),
+                goldRepository.getGoldBalance()
+            ) { ownedItems, skills, goldBalance ->
+                Triple(ownedItems, skills, goldBalance)
+            }.collect { (ownedItems, skills, goldBalance) ->
                 val ownedNames = ownedItems.map { it.name }.toSet()
-                val goldBalance = _uiState.value.goldBalance
 
                 val shopItems = ITEM_TEMPLATES.map { template ->
                     ShopItem(
@@ -116,6 +118,7 @@ class ShopViewModel @Inject constructor(
 
                 _uiState.update {
                     it.copy(
+                        goldBalance = goldBalance,
                         ownedItems = ownedItems,
                         skills = skills,
                         shopItems = shopItems,
