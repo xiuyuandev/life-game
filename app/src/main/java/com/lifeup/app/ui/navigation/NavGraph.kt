@@ -17,6 +17,13 @@ import com.lifeup.app.ui.about.PrivacyPolicyScreen
 import com.lifeup.app.ui.backup.BackupScreen
 import com.lifeup.app.ui.character.CharacterScreen
 import com.lifeup.app.ui.combo.ComboScreen
+import com.lifeup.app.ui.demon.DemonBattleScreen
+import com.lifeup.app.ui.demon.DemonCreatorScreen
+import com.lifeup.app.ui.demon.DemonDetailScreen
+import com.lifeup.app.ui.demon.DemonDiaryScreen
+import com.lifeup.app.ui.demon.DemonListScreen
+import com.lifeup.app.ui.demon.DemonTowerScreen
+import com.lifeup.app.ui.demon.UnlocksScreen
 import com.lifeup.app.ui.ledger.LedgerScreen
 import com.lifeup.app.ui.onboarding.OnboardingScreen
 import com.lifeup.app.ui.profile.ProfileScreen
@@ -32,6 +39,7 @@ import com.lifeup.app.ui.skills.SkillsScreen
 import com.lifeup.app.ui.stats.StatsScreen
 import com.lifeup.app.ui.timer.TimerScreen
 import com.lifeup.app.ui.today.TodayScreen
+import com.lifeup.app.domain.model.DemonId
 
 @Composable
 fun LifeUpNavGraph(
@@ -81,6 +89,9 @@ fun LifeUpNavGraph(
                 },
                 onNavigateToLedger = {
                     navController.navigate(Screen.Ledger.route)
+                },
+                onNavigateToDemonList = {
+                    navController.navigate(Screen.DemonList.route)
                 }
             )
         }
@@ -193,7 +204,12 @@ fun LifeUpNavGraph(
         composable(
             route = Screen.Timer.route,
             arguments = listOf(
-                navArgument("skillId") { type = NavType.LongType }
+                navArgument("skillId") { type = NavType.LongType },
+                navArgument("demonId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
             )
         ) { backStackEntry ->
             val skillId = backStackEntry.arguments?.getLong("skillId") ?: 0L
@@ -264,6 +280,97 @@ fun LifeUpNavGraph(
 
         composable(Screen.PrivacyPolicy.route) {
             PrivacyPolicyScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // ---------- 心魔试炼路由 ----------
+
+        composable(Screen.DemonList.route) {
+            DemonListScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { demonId ->
+                    navController.navigate(Screen.DemonDetail.createRoute(demonId.key))
+                },
+                onNavigateToCreator = {
+                    navController.navigate(Screen.DemonCreator.route)
+                },
+                onNavigateToTower = {
+                    navController.navigate(Screen.DemonTower.route)
+                },
+                onNavigateToUnlocks = {
+                    navController.navigate(Screen.Unlocks.route)
+                }
+            )
+        }
+
+        composable(
+            route = Screen.DemonDetail.route,
+            arguments = listOf(navArgument("demonId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val key = backStackEntry.arguments?.getString("demonId") ?: DemonId.PROCRASTINATION_SERPENT.key
+            val demonId = DemonId.fromKey(key) ?: DemonId.PROCRASTINATION_SERPENT
+            DemonDetailScreen(
+                demonId = demonId,
+                onNavigateBack = { navController.popBackStack() },
+                onStartBattle = { id ->
+                    // 跳到计时器，传入 demonId（实际未用 skillId，选择默认 0）
+                    navController.navigate(Screen.Timer.createRoute(skillId = 0L, demonId = id.key))
+                },
+                onOpenDiary = { id ->
+                    navController.navigate(Screen.DemonDiary.createRoute(id.key))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.DemonBattle.route,
+            arguments = listOf(navArgument("demonId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val key = backStackEntry.arguments?.getString("demonId") ?: DemonId.PROCRASTINATION_SERPENT.key
+            val demonId = DemonId.fromKey(key) ?: DemonId.PROCRASTINATION_SERPENT
+            DemonBattleScreen(
+                demonId = demonId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { id ->
+                    navController.navigate(Screen.DemonDetail.createRoute(id.key))
+                },
+                onWriteDiary = { id ->
+                    navController.navigate(Screen.DemonDiary.createRoute(id.key))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.DemonDiary.route,
+            arguments = listOf(navArgument("demonId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val key = backStackEntry.arguments?.getString("demonId") ?: DemonId.PROCRASTINATION_SERPENT.key
+            val demonId = DemonId.fromKey(key) ?: DemonId.PROCRASTINATION_SERPENT
+            DemonDiaryScreen(
+                demonId = demonId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.DemonCreator.route) {
+            DemonCreatorScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onCreated = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.DemonTower.route) {
+            DemonTowerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onStartBattleWithDemon = { key ->
+                    navController.navigate(Screen.Timer.createRoute(skillId = 0L, demonId = key))
+                }
+            )
+        }
+
+        composable(Screen.Unlocks.route) {
+            UnlocksScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -42,6 +43,7 @@ class SettingsPrefs @Inject constructor(
         val SOUND_ENABLED = booleanPreferencesKey("sound_enabled")
         val HAPTIC_ENABLED = booleanPreferencesKey("haptic_enabled")
         val DAILY_QUOTE_INDEX = intPreferencesKey("daily_quote_index")
+        val UNLOCKED_FEATURES = stringPreferencesKey("unlocked_features")
     }
 
     fun getThemeMode(): Flow<String> {
@@ -168,5 +170,31 @@ class SettingsPrefs @Inject constructor(
         dataStore.edit { preferences ->
             preferences[Keys.DAILY_QUOTE_INDEX] = index
         }
+    }
+
+    // ---- 真实功能解锁（击败心魔后写入） ----
+
+    fun getUnlockedFeatures(): Flow<Set<String>> {
+        return dataStore.data.map { preferences ->
+            val raw = preferences[Keys.UNLOCKED_FEATURES] ?: ""
+            if (raw.isBlank()) emptySet() else raw.split(",").toSet()
+        }
+    }
+
+    suspend fun unlockFeature(featureKey: String) {
+        dataStore.edit { preferences ->
+            val current = preferences[Keys.UNLOCKED_FEATURES] ?: ""
+            val set = if (current.isBlank()) mutableSetOf() else current.split(",").toMutableSet()
+            set.add(featureKey)
+            preferences[Keys.UNLOCKED_FEATURES] = set.joinToString(",")
+        }
+    }
+
+    suspend fun unlockFeature(feature: com.lifeup.app.domain.model.DemonUnlockKey) {
+        unlockFeature(feature.key)
+    }
+
+    suspend fun isFeatureUnlocked(featureKey: String): Boolean {
+        return getUnlockedFeatures().first().contains(featureKey)
     }
 }

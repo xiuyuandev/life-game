@@ -97,6 +97,7 @@ fun TodayScreen(
     onNavigateToRetroactive: () -> Unit = {},
     onNavigateToCharacter: () -> Unit = {},
     onNavigateToLedger: () -> Unit = {},
+    onNavigateToDemonList: () -> Unit = {},
     viewModel: TodayViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -257,6 +258,11 @@ fun TodayScreen(
                         onNavigateToCharacter = onNavigateToCharacter,
                         onNavigateToLedger = onNavigateToLedger
                     )
+                }
+
+                // 心魔试炼快捷入口
+                item {
+                    com.lifeup.app.ui.demon.DemonEntryCard(onClick = onNavigateToDemonList)
                 }
 
                 // Habit section

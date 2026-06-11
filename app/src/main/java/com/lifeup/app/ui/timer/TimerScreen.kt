@@ -159,6 +159,15 @@ fun TimerScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                // 心魔模式横幅
+                if (uiState.demonId != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DemonModeBanner(
+                        demonId = uiState.demonId!!,
+                        todayDayOfWeek = java.time.LocalDate.now().dayOfWeek.value
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(40.dp))
 
                 // Timer ring + time display
@@ -320,6 +329,139 @@ fun TimerScreen(
             modifier = Modifier.fillMaxSize(),
             onComplete = { showLevelUp = false }
         )
+    }
+
+    // 心魔战果展示
+    if (uiState.showDemonOutcome && uiState.demonOutcome != null) {
+        DemonOutcomeSheet(
+            outcome = uiState.demonOutcome!!,
+            onDismiss = { viewModel.dismissDemonOutcome() }
+        )
+    }
+}
+
+/**
+ * 心魔模式横幅：在计时器顶部显示"你正在与 X 战斗"
+ */
+@Composable
+private fun DemonModeBanner(demonId: com.lifeup.app.domain.model.DemonId, todayDayOfWeek: Int) {
+    val demon = com.lifeup.app.domain.model.DemonTemplate.ALL.firstOrNull { it.id == demonId }
+        ?: return
+    val isToday = demonId != com.lifeup.app.domain.model.DemonId.MIRROR_OF_SELF
+    val partName = com.lifeup.app.domain.model.DemonTemplate.PART_NAMES.getOrNull(todayDayOfWeek - 1) ?: ""
+    androidx.compose.material3.Surface(
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        color = demon.color.copy(alpha = 0.15f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, demon.color.copy(alpha = 0.4f))
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text(text = demon.emoji, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(10.dp))
+            androidx.compose.foundation.layout.Column(modifier = androidx.compose.ui.Modifier.weight(1f)) {
+                Text(
+                    text = "为心魔而战 · ${demon.displayName}",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                    color = demon.accent,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+                Text(
+                    text = "本次专注将伤害它的「$partName」（${isToday.let { "今日" }}）",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DemonOutcomeSheet(
+    outcome: com.lifeup.app.domain.game.DemonBattleOutcome,
+    onDismiss: () -> Unit
+) {
+    val demon = outcome.demon
+    val breakdown = outcome.breakdown
+    androidx.compose.material3.Surface(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+        color = demon.color.copy(alpha = 0.92f)
+    ) {
+        androidx.compose.foundation.layout.Column(
+            modifier = androidx.compose.ui.Modifier.padding(20.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "${demon.emoji} ${demon.displayName}",
+                color = androidx.compose.ui.graphics.Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(12.dp))
+            val isHit = breakdown.hitPart && breakdown.totalDamage > 0
+            val isDefeat = outcome is com.lifeup.app.domain.game.DemonBattleOutcome.Defeated
+            Text(
+                text = when {
+                    isDefeat -> "已伏诛 ✦"
+                    isHit -> "-${breakdown.totalDamage} HP"
+                    else -> "未命中"
+                },
+                color = androidx.compose.ui.graphics.Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.displaySmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold
+            )
+            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
+            Text(
+                text = breakdown.reason ?: "${breakdown.focusMinutes} 分钟 × 分类 × 部位",
+                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.85f),
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+            )
+            if (isDefeat) {
+                val unlock = (outcome as com.lifeup.app.domain.game.DemonBattleOutcome.Defeated).unlockedFeature
+                androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(16.dp))
+                androidx.compose.material3.Surface(
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    color = androidx.compose.ui.graphics.Color(0xFFFFD700)
+                ) {
+                    androidx.compose.foundation.layout.Row(
+                        modifier = androidx.compose.ui.Modifier.padding(12.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    ) {
+                        Text(text = unlock.emoji, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                        androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
+                        androidx.compose.foundation.layout.Column {
+                            Text(
+                                text = "新能力：${unlock.title}",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                                color = androidx.compose.ui.graphics.Color(0xFF1B1B1B),
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            )
+                            Text(
+                                text = unlock.description,
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.ui.graphics.Color(0xFF1B1B1B).copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+                }
+            }
+            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(20.dp))
+            androidx.compose.material3.Button(
+                onClick = onDismiss,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = androidx.compose.ui.graphics.Color.White,
+                    contentColor = demon.color
+                )
+            ) {
+                Text("继续", fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
+        }
     }
 }
 

@@ -9,14 +9,22 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lifeup.app.data.db.dao.CharacterStateDao
 import com.lifeup.app.data.db.dao.ComboDao
+import com.lifeup.app.data.db.dao.CustomDemonDao
 import com.lifeup.app.data.db.dao.DailyStateDao
+import com.lifeup.app.data.db.dao.DemonDiaryDao
+import com.lifeup.app.data.db.dao.DemonPartDamageDao
+import com.lifeup.app.data.db.dao.DemonProgressDao
 import com.lifeup.app.data.db.dao.ItemDao
 import com.lifeup.app.data.db.dao.SkillDao
 import com.lifeup.app.data.db.dao.TimeRecordDao
 import com.lifeup.app.data.db.dao.TodoDao
 import com.lifeup.app.data.db.entity.CharacterStateEntity
 import com.lifeup.app.data.db.entity.ComboEntity
+import com.lifeup.app.data.db.entity.CustomDemonEntity
 import com.lifeup.app.data.db.entity.DailyStateEntity
+import com.lifeup.app.data.db.entity.DemonDiaryEntity
+import com.lifeup.app.data.db.entity.DemonPartDamageEntity
+import com.lifeup.app.data.db.entity.DemonProgressEntity
 import com.lifeup.app.data.db.entity.ItemEntity
 import com.lifeup.app.data.db.entity.SkillEntity
 import com.lifeup.app.data.db.entity.TimeRecordEntity
@@ -31,9 +39,13 @@ import com.lifeup.app.data.db.entity.TodoEntity
         ItemEntity::class,
         DailyStateEntity::class,
         CharacterStateEntity::class,
-        AchievementEntity::class
+        AchievementEntity::class,
+        DemonProgressEntity::class,
+        DemonPartDamageEntity::class,
+        DemonDiaryEntity::class,
+        CustomDemonEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -47,6 +59,10 @@ abstract class LifeUpDatabase : RoomDatabase() {
     abstract fun dailyStateDao(): DailyStateDao
     abstract fun achievementDao(): AchievementDao
     abstract fun characterStateDao(): CharacterStateDao
+    abstract fun demonProgressDao(): DemonProgressDao
+    abstract fun demonPartDamageDao(): DemonPartDamageDao
+    abstract fun demonDiaryDao(): DemonDiaryDao
+    abstract fun customDemonDao(): CustomDemonDao
 
     companion object {
         @Volatile
@@ -206,6 +222,78 @@ abstract class LifeUpDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Inner demon progress (one row per demon)
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS demon_progress (
+                        demonId TEXT NOT NULL PRIMARY KEY,
+                        totalHp INTEGER NOT NULL,
+                        currentHp INTEGER NOT NULL,
+                        isDefeated INTEGER NOT NULL DEFAULT 0,
+                        discoveredAt INTEGER NOT NULL,
+                        defeatedAt INTEGER,
+                        attemptCount INTEGER NOT NULL DEFAULT 0,
+                        isActive INTEGER NOT NULL DEFAULT 0,
+                        progressFraction REAL NOT NULL DEFAULT 0,
+                        lastUpdated INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                // 7 parts per demon, attackable once per day
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS demon_part_damage (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        demonId TEXT NOT NULL,
+                        dayOfWeek INTEGER NOT NULL,
+                        maxHp INTEGER NOT NULL,
+                        currentHp INTEGER NOT NULL,
+                        totalDamage INTEGER NOT NULL DEFAULT 0,
+                        hitCount INTEGER NOT NULL DEFAULT 0,
+                        lastHitAt INTEGER,
+                        isBroken INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_demon_part_damage_demonId_dayOfWeek ON demon_part_damage(demonId, dayOfWeek)")
+                // Reflection diary written after defeating demons
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS demon_diary (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        demonId TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        takeaway TEXT,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_demon_diary_demonId ON demon_diary(demonId)")
+                // Player-created demons
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS custom_demons (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        displayName TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        colorHex TEXT NOT NULL,
+                        weakCategories TEXT NOT NULL,
+                        resistCategories TEXT NOT NULL,
+                        partHpMap TEXT NOT NULL,
+                        currentDamage INTEGER NOT NULL DEFAULT 0,
+                        maxHp INTEGER NOT NULL,
+                        isDefeated INTEGER NOT NULL DEFAULT 0,
+                        defeatedAt INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): LifeUpDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -213,7 +301,10 @@ abstract class LifeUpDatabase : RoomDatabase() {
                     LifeUpDatabase::class.java,
                     "lifeup_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                        MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+                    )
                     .build()
                 INSTANCE = instance
                 instance

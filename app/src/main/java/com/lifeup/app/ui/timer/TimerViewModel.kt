@@ -6,13 +6,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lifeup.app.data.db.FocusType
 import com.lifeup.app.data.db.RecordType
+import com.lifeup.app.domain.game.DemonBattleOutcome
+import com.lifeup.app.domain.game.DemonEngine
 import com.lifeup.app.domain.game.GameEngine
 import com.lifeup.app.domain.game.TimerResult
+import com.lifeup.app.domain.model.DemonId
+import com.lifeup.app.domain.model.DemonTemplate
 import com.lifeup.app.domain.model.Skill
 import com.lifeup.app.domain.repository.AchievementRepository
 import com.lifeup.app.domain.repository.CharacterStateRepository
 import com.lifeup.app.domain.repository.ComboRepository
 import com.lifeup.app.domain.repository.DailyStateRepository
+import com.lifeup.app.domain.repository.DemonRepository
 import com.lifeup.app.domain.repository.ItemRepository
 import com.lifeup.app.domain.repository.SkillRepository
 import com.lifeup.app.domain.repository.TimeRecordRepository
@@ -40,7 +45,12 @@ data class TimerUiState(
     val recordType: RecordType = RecordType.INVESTMENT,
     val settlementResult: TimerResult? = null,
     val showSettlement: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    /** 启用了"为心魔而战"模式时，记录目标心魔 id。 */
+    val demonId: DemonId? = null,
+    /** 最近一次攻击心魔的结算。 */
+    val demonOutcome: DemonBattleOutcome? = null,
+    val showDemonOutcome: Boolean = false
 )
 
 @HiltViewModel
@@ -53,13 +63,17 @@ class TimerViewModel @Inject constructor(
     private val itemRepository: ItemRepository,
     private val characterStateRepository: CharacterStateRepository,
     private val achievementRepository: AchievementRepository,
+    private val demonRepository: DemonRepository,
+    private val demonEngine: DemonEngine,
     val settingsPrefs: com.lifeup.app.data.preferences.SettingsPrefs,
     private val application: Application
 ) : ViewModel() {
 
     private val skillId: Long = savedStateHandle["skillId"] ?: 0L
+    private val demonIdKey: String? = savedStateHandle.get<String>("demonId")
+    private val demonId: DemonId? = demonIdKey?.let { DemonId.fromKey(it) }
 
-    private val _uiState = MutableStateFlow(TimerUiState())
+    private val _uiState = MutableStateFlow(TimerUiState(demonId = demonId))
     val uiState: StateFlow<TimerUiState> = _uiState.asStateFlow()
 
     private val timerManager = TimerManager
@@ -74,7 +88,25 @@ class TimerViewModel @Inject constructor(
     private fun loadSkill() {
         viewModelScope.launch {
             if (skillId == 0L) {
-                _uiState.update { it.copy(isLoading = false, error = "未选择技能") }
+                // "为心魔而战"模式可能没有具体技能 —— 用一个合成的伪技能占位
+                if (demonId != null) {
+                    val pseudo = Skill(
+                        id = 0L,
+                        name = "为心魔而战",
+                        description = "与内心敌人的缠斗。",
+                        category = com.lifeup.app.data.db.SkillCategory.MENTAL,
+                        level = 1,
+                        totalMinutes = 0L,
+                        colorHex = "#5B6B7A",
+                        iconName = "demon",
+                        isArchived = false,
+                        createdAt = System.currentTimeMillis(),
+                        isHabit = false
+                    )
+                    _uiState.update { it.copy(skill = pseudo, isLoading = false) }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "未选择技能") }
+                }
                 return@launch
             }
             val skill = skillRepository.getSkillById(skillId)
@@ -141,43 +173,61 @@ class TimerViewModel @Inject constructor(
         val durationSeconds = timerManager.stopTimer()
         val durationMinutes = timerManager.toDurationMinutes(durationSeconds)
         val recordType = _uiState.value.recordType
+        val targetDemonId = _uiState.value.demonId
 
         viewModelScope.launch {
+            var settlement: TimerResult? = null
             try {
-                val result = GameEngine.processTimerResult(
-                    skillId = skill.id,
-                    durationMinutes = durationMinutes,
-                    recordType = recordType,
-                    focusType = FocusType.FOCUSED,
-                    skillRepository = skillRepository,
-                    timeRecordRepository = timeRecordRepository,
-                    dailyStateRepository = dailyStateRepository,
-                    comboRepository = comboRepository,
-                    itemRepository = itemRepository,
-                    characterStateRepository = characterStateRepository,
-                    achievementRepository = achievementRepository,
-                    settingsPrefs = settingsPrefs
-                )
-                _uiState.update {
-                    it.copy(
-                        settlementResult = result,
-                        showSettlement = true
+                if (skill.id > 0L) {
+                    settlement = GameEngine.processTimerResult(
+                        skillId = skill.id,
+                        durationMinutes = durationMinutes,
+                        recordType = recordType,
+                        focusType = FocusType.FOCUSED,
+                        skillRepository = skillRepository,
+                        timeRecordRepository = timeRecordRepository,
+                        dailyStateRepository = dailyStateRepository,
+                        comboRepository = comboRepository,
+                        itemRepository = itemRepository,
+                        characterStateRepository = characterStateRepository,
+                        achievementRepository = achievementRepository,
+                        settingsPrefs = settingsPrefs
                     )
                 }
             } catch (_: Exception) {
-                // If processing fails, still show a basic settlement
-                _uiState.update {
-                    it.copy(
-                        settlementResult = TimerResult(
-                            expGained = durationMinutes.toLong(),
-                            goldGained = durationMinutes,
-                            leveledUp = false,
-                            newLevel = skill.level,
-                            itemsUnlocked = emptyList()
-                        ),
-                        showSettlement = true
+                // ignore - in demon mode the GameEngine may throw (no real skill)
+            }
+            if (settlement == null) {
+                settlement = TimerResult(
+                    expGained = durationMinutes.toLong(),
+                    goldGained = durationMinutes,
+                    leveledUp = false,
+                    newLevel = skill.level,
+                    itemsUnlocked = emptyList()
+                )
+            }
+
+            // 启用了"为心魔而战"模式时，把结果喂给 DemonEngine
+            var demonOutcome: DemonBattleOutcome? = null
+            if (targetDemonId != null) {
+                val demon = DemonTemplate.ALL.firstOrNull { it.id == targetDemonId }
+                if (demon != null) {
+                    demonOutcome = demonEngine.applySessionResult(
+                        demon = demon,
+                        focusMinutes = durationMinutes,
+                        skillCategory = skill.category
                     )
+                    demonEngine.ensureMirrorIfUnlocked()
                 }
+            }
+
+            _uiState.update {
+                it.copy(
+                    settlementResult = settlement,
+                    showSettlement = true,
+                    demonOutcome = demonOutcome,
+                    showDemonOutcome = demonOutcome != null
+                )
             }
         }
     }
@@ -204,6 +254,10 @@ class TimerViewModel @Inject constructor(
 
     fun dismissSettlement() {
         _uiState.update { it.copy(showSettlement = false, settlementResult = null) }
+    }
+
+    fun dismissDemonOutcome() {
+        _uiState.update { it.copy(showDemonOutcome = false, demonOutcome = null) }
     }
 
     fun formatElapsedTime(seconds: Long): String {
