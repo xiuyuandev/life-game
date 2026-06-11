@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ import com.lifeup.app.ui.components.ConfettiAnimation
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,13 +62,17 @@ fun AchievementScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var showConfetti by remember { mutableStateOf(false) }
 
+    val scope = rememberCoroutineScope()
+
     LaunchedEffect(Unit) {
-        viewModel.newlyUnlocked.collect { achievement ->
-            showConfetti = true
-            snackbarHostState.showSnackbar(
-                message = "🏆 成就解锁: ${achievement.title}",
-                actionLabel = "太棒了!"
-            )
+        scope.launch {
+            viewModel.newlyUnlocked.collect { achievement ->
+                showConfetti = true
+                snackbarHostState.showSnackbar(
+                    message = "🏆 成就解锁: ${achievement.title}",
+                    actionLabel = "太棒了!"
+                )
+            }
         }
     }
 

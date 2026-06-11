@@ -48,10 +48,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import com.lifeup.app.data.db.SkillCategory
 
 private val categoryColorMap: Map<SkillCategory, Color> = mapOf(
@@ -413,6 +419,12 @@ private fun CreateComboDialog(
 ) {
     var primaryExpanded by remember { mutableStateOf(false) }
     var secondaryExpanded by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(Unit) {
+        try { focusRequester.requestFocus() } catch (_: Exception) { }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -510,7 +522,16 @@ private fun CreateComboDialog(
                     value = uiState.comboName,
                     onValueChange = onNameChange,
                     label = { Text("组合名称（可选）") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            onConfirm()
+                        }
+                    )
                 )
 
                 // Auto-calculated exp bonus preview
