@@ -57,6 +57,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.SlotType
+import com.lifeup.app.ui.components.AnimatedCounter
 
 private val tierColorMap: Map<ItemTier, Color> = mapOf(
     ItemTier.COMMON to Color(0xFF9E9E9E),
@@ -128,8 +129,15 @@ fun ShopScreen(
                             tint = Color(0xFFFFB300)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
+                        AnimatedCounter(
+                            count = uiState.goldBalance,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFFB300)
+                            )
+                        )
                         Text(
-                            text = "${uiState.goldBalance}G",
+                            text = "G",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFFFB300)

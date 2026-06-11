@@ -81,6 +81,7 @@ import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.SlotType
 import com.lifeup.app.data.preferences.OutfitPreset
 import com.lifeup.app.domain.model.Item
+import com.lifeup.app.ui.components.AnimatedCounter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -319,12 +320,21 @@ private fun CharacterHeader(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Level
-                Text(
-                    text = "Lv.$characterLevel",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Lv.",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    AnimatedCounter(
+                        count = characterLevel,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(10.dp))
 

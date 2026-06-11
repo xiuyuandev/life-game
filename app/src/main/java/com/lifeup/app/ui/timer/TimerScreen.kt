@@ -70,6 +70,7 @@ import com.lifeup.app.data.db.ItemTier
 import com.lifeup.app.data.db.RecordType
 import com.lifeup.app.domain.game.TimerResult
 import com.lifeup.app.service.TimerManager
+import com.lifeup.app.ui.components.AnimatedCounter
 import com.lifeup.app.ui.components.ConfettiAnimation
 import com.lifeup.app.ui.components.HapticFeedbackHelper
 import com.lifeup.app.ui.components.LevelUpAnimation
@@ -489,10 +490,17 @@ private fun TimerSettlementSheet(
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            text = "+${result.expGained}",
+                            text = "+",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
+                        )
+                        AnimatedCounter(
+                            count = result.expGained,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         )
                     }
 
@@ -509,10 +517,17 @@ private fun TimerSettlementSheet(
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            text = "+${result.goldGained}",
+                            text = "+",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFFFFB300)
+                        )
+                        AnimatedCounter(
+                            count = result.goldGained,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFFFB300)
+                            )
                         )
                     }
 
