@@ -1,13 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">人生升级</string>
+
+    <!-- Navigation -->
     <string name="tab_today">今日</string>
     <string name="tab_skills">技能</string>
     <string name="tab_character">角色馆</string>
     <string name="tab_profile">我的</string>
+
+    <!-- Screen Titles -->
     <string name="screen_skill_detail">技能详情</string>
     <string name="screen_create_skill">创建技能</string>
     <string name="screen_review">回顾</string>
     <string name="screen_onboarding">引导</string>
     <string name="screen_timer">计时器</string>
+    <string name="screen_shop">金币商店</string>
+    <string name="screen_stats">统计</string>
+    <string name="screen_ledger">账本</string>
+    <string name="screen_combo">技能组合</string>
+    <string name="screen_achievement">成就</string>
+    <string name="screen_showcase">展示馆</string>
+    <string name="screen_backup">数据管理</string>
+    <string name="screen_about">关于</string>
+    <string name="screen_privacy">隐私政策</string>
+    <string name="screen_retroactive">补录时间</string>
+    <string name="screen_settings">设置</string>
+
+    <!-- Common Actions -->
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="close">关闭</string>
+    <string name="back">返回</string>
+    <string name="loading">加载中…</string>
+    <string name="retry">重试</string>
+
+    <!-- Common Labels -->
+    <string name="gold">金币</string>
+    <string name="exp">经验值</string>
+    <string name="level">等级</string>
+    <string name="character_level">角色等级</string>
+    <string name="max_level">最高等级</string>
+    <string name="streak">连续打卡</string>
+    <string name="investment">投资</string>
+    <string name="consumption">消费</string>
+    <string name="investment_duration">投资时长</string>
+    <string name="gold_earned">获得金币</string>
+    <string name="gold_income">金币收入</string>
+    <string name="gold_spent">金币支出</string>
+    <string name="net_gold">净金币</string>
+    <string name="avg_daily_investment">日均投资 %s</string>
+    <string name="exp_bonus">经验加成 ×%.2f</string>
+    <string name="exp_bonus_colon">经验加成：×%.2f</string>
+    <string name="record_type_investment">投资性</string>
+    <string name="record_type_consumption">消耗性</string>
+    <string name="progress_to_next">距下一等级 %d%%</string>
+
+    <!-- Empty States -->
+    <string name="empty_no_data">暂无数据</string>
+    <string name="empty_no_skills">还没有创建任何技能</string>
+    <string name="empty_no_achievements">还没有解锁成就</string>
+    <string name="empty_no_records">还没有时间记录</string>
+    <string name="empty_gold_zero">金币余额为 0</string>
+    <string name="empty_gold_zero_tip">通过计时专注来赚取金币，投资性时间每分钟获得 1 金币</string>
+    <string name="empty_go_timer">去计时赚取金币</string>
+    <string name="empty_no_presets">还没有保存的预设</string>
+    <string name="empty_preset_limit">最多保存 5 个预设</string>
+
+    <!-- Shop -->
+    <string name="purchase_success">购买成功！</string>
+    <string name="purchase_failed">购买失败</string>
+    <string name="gold_insufficient">金币不足</string>
+    <string name="gold_insufficient_tip">通过计时专注来赚取金币，投资性时间每分钟获得 1 金币</string>
+
+    <!-- Character -->
+    <string name="unequip_confirm">确定要卸下「%s」吗？</string>
+    <string name="save_outfit_preset">保存装束预设</string>
+
+    <!-- Timer -->
+    <string name="timer_type_investment">投资性</string>
+
+    <!-- Tips -->
+    <string name="tip_start_timer">试试开始计时吧！投资性时间会为你带来经验和金币</string>
+    <string name="tip_create_combo">创建更多技能来解锁组合加成！跨分类技能组合可获得额外经验</string>
+
+    <!-- Backup -->
+    <string name="import_confirm_message">导入将覆盖现有数据，此操作不可撤销。确定要继续吗？</string>
+    <string name="confirm_import">确定导入</string>
+
+    <!-- Achievement -->
+    <string name="achievement_category_streak">连续打卡</string>
+
+    <!-- Showcase -->
+    <string name="showcase_highest_level">最高等级: %s LV%d</string>
+    <string name="showcase_highest_level_empty">最高等级: 暂无</string>
 </resources>

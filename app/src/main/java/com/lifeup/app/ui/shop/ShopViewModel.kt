@@ -17,7 +17,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ShopUiState(
     val goldBalance: Int = 1000,
     val shopItems: List<ShopItem> = emptyList(),
@@ -29,12 +31,14 @@ data class ShopUiState(
     val purchaseSuccess: Boolean? = null
 )
 
+@Immutable
 data class ShopItem(
     val template: ItemTemplate,
     val isOwned: Boolean = false,
     val canAfford: Boolean = false
 )
 
+@Immutable
 data class ItemTemplate(
     val name: String,
     val itemTier: ItemTier,
@@ -103,32 +107,36 @@ class ShopViewModel @Inject constructor(
         loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            combine(
-                itemRepository.getUnlockedItems(),
-                skillRepository.getActiveSkills(),
-                goldRepository.getGoldBalance()
-            ) { ownedItems, skills, goldBalance ->
-                Triple(ownedItems, skills, goldBalance)
-            }.collect { (ownedItems, skills, goldBalance) ->
-                val ownedNames = ownedItems.map { it.name }.toSet()
+            try {
+                combine(
+                    itemRepository.getUnlockedItems(),
+                    skillRepository.getActiveSkills(),
+                    goldRepository.getGoldBalance()
+                ) { ownedItems, skills, goldBalance ->
+                    Triple(ownedItems, skills, goldBalance)
+                }.collect { (ownedItems, skills, goldBalance) ->
+                    val ownedNames = ownedItems.map { it.name }.toSet()
 
-                val shopItems = ITEM_TEMPLATES.map { template ->
-                    ShopItem(
-                        template = template,
-                        isOwned = template.name in ownedNames,
-                        canAfford = template.price <= goldBalance
-                    )
-                }
+                    val shopItems = ITEM_TEMPLATES.map { template ->
+                        ShopItem(
+                            template = template,
+                            isOwned = template.name in ownedNames,
+                            canAfford = template.price <= goldBalance
+                        )
+                    }
 
-                _uiState.update {
-                    it.copy(
-                        goldBalance = goldBalance,
-                        ownedItems = ownedItems,
-                        skills = skills,
-                        shopItems = shopItems,
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            goldBalance = goldBalance,
+                            ownedItems = ownedItems,
+                            skills = skills,
+                            shopItems = shopItems,
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -155,39 +163,43 @@ class ShopViewModel @Inject constructor(
 
     fun purchaseItem(template: ItemTemplate) {
         viewModelScope.launch {
-            val currentBalance = _uiState.value.goldBalance
-            if (template.price > currentBalance) {
-                _uiState.update { it.copy(purchaseSuccess = false) }
-                return@launch
-            }
+            try {
+                val currentBalance = _uiState.value.goldBalance
+                if (template.price > currentBalance) {
+                    _uiState.update { it.copy(purchaseSuccess = false) }
+                    return@launch
+                }
 
-            val ownedNames = _uiState.value.ownedItems.map { it.name }.toSet()
-            if (template.name in ownedNames) {
-                _uiState.update { it.copy(purchaseSuccess = false) }
-                return@launch
-            }
+                val ownedNames = _uiState.value.ownedItems.map { it.name }.toSet()
+                if (template.name in ownedNames) {
+                    _uiState.update { it.copy(purchaseSuccess = false) }
+                    return@launch
+                }
 
-            val item = Item(
-                name = template.name,
-                skillId = 0L,
-                itemTier = template.itemTier,
-                attributeBonus = template.attributeBonus,
-                expBonusContribution = template.expBonusContribution,
-                description = template.description,
-                slotType = template.slotType,
-                isEquipped = false,
-                equippedSlot = null,
-                isUnlocked = true,
-                price = template.price
-            )
-
-            itemRepository.insertItem(item)
-            goldRepository.spendGold(template.price)
-
-            _uiState.update {
-                it.copy(
-                    purchaseSuccess = true
+                val item = Item(
+                    name = template.name,
+                    skillId = 0L,
+                    itemTier = template.itemTier,
+                    attributeBonus = template.attributeBonus,
+                    expBonusContribution = template.expBonusContribution,
+                    description = template.description,
+                    slotType = template.slotType,
+                    isEquipped = false,
+                    equippedSlot = null,
+                    isUnlocked = true,
+                    price = template.price
                 )
+
+                itemRepository.insertItem(item)
+                goldRepository.spendGold(template.price)
+
+                _uiState.update {
+                    it.copy(
+                        purchaseSuccess = true
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(purchaseSuccess = false) }
             }
         }
     }

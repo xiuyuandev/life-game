@@ -15,7 +15,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ComboUiState(
     val combos: List<Combo> = emptyList(),
     val skills: List<Skill> = emptyList(),
@@ -28,6 +30,7 @@ data class ComboUiState(
     val errorMessage: String? = null
 )
 
+@Immutable
 data class RecommendedCombo(
     val name: String,
     val primaryCategory: SkillCategory,
@@ -112,20 +115,24 @@ class ComboViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            combine(
-                comboRepository.getAll(),
-                skillRepository.getActiveSkills()
-            ) { combos, skills ->
-                Pair(combos, skills)
-            }.collect { (combos, skills) ->
-                _uiState.update {
-                    it.copy(
-                        combos = combos,
-                        skills = skills,
-                        recommendedCombos = RECOMMENDED_COMBOS,
-                        isLoading = false
-                    )
+            try {
+                combine(
+                    comboRepository.getAll(),
+                    skillRepository.getActiveSkills()
+                ) { combos, skills ->
+                    Pair(combos, skills)
+                }.collect { (combos, skills) ->
+                    _uiState.update {
+                        it.copy(
+                            combos = combos,
+                            skills = skills,
+                            recommendedCombos = RECOMMENDED_COMBOS,
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -213,31 +220,39 @@ class ComboViewModel @Inject constructor(
         val expBonus = calculateExpBonus(primarySkill.category, secondarySkill.category)
 
         viewModelScope.launch {
-            comboRepository.insertCombo(
-                Combo(
-                    name = name,
-                    primarySkillId = primaryId,
-                    secondarySkillId = secondaryId,
-                    expBonus = expBonus,
-                    suggestion = null,
-                    isActive = true
+            try {
+                comboRepository.insertCombo(
+                    Combo(
+                        name = name,
+                        primarySkillId = primaryId,
+                        secondarySkillId = secondaryId,
+                        expBonus = expBonus,
+                        suggestion = null,
+                        isActive = true
+                    )
                 )
-            )
-            _uiState.update { it.copy(showCreateDialog = false) }
+                _uiState.update { it.copy(showCreateDialog = false) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(errorMessage = "创建失败，请重试") }
+            }
         }
     }
 
     fun deleteCombo(id: Long) {
         viewModelScope.launch {
-            val combo = _uiState.value.combos.find { it.id == id } ?: return@launch
-            comboRepository.deleteCombo(combo)
+            try {
+                val combo = _uiState.value.combos.find { it.id == id } ?: return@launch
+                comboRepository.deleteCombo(combo)
+            } catch (_: Exception) { }
         }
     }
 
     fun toggleComboActive(id: Long) {
         viewModelScope.launch {
-            val combo = _uiState.value.combos.find { it.id == id } ?: return@launch
-            comboRepository.updateCombo(combo.copy(isActive = !combo.isActive))
+            try {
+                val combo = _uiState.value.combos.find { it.id == id } ?: return@launch
+                comboRepository.updateCombo(combo.copy(isActive = !combo.isActive))
+            } catch (_: Exception) { }
         }
     }
 

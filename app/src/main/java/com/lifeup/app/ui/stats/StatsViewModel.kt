@@ -26,8 +26,11 @@ import java.time.temporal.WeekFields
 import java.util.Locale
 import javax.inject.Inject
 
+import androidx.compose.runtime.Immutable
+
 enum class StatsPeriod { WEEK, MONTH, YEAR }
 
+@Immutable
 data class SkillStat(
     val skill: Skill,
     val investmentMinutes: Int,
@@ -37,12 +40,14 @@ data class SkillStat(
     val goldEarned: Int
 )
 
+@Immutable
 data class DailyData(
     val date: String,
     val investmentMinutes: Int,
     val consumptionMinutes: Int
 )
 
+@Immutable
 data class StatsUiState(
     val period: StatsPeriod = StatsPeriod.WEEK,
     val startDate: String = "",
@@ -60,6 +65,7 @@ data class StatsUiState(
     val isLoading: Boolean = true
 )
 
+@Immutable
 data class CategoryDistribution(
     val category: SkillCategory,
     val totalMinutes: Int,
@@ -210,135 +216,139 @@ class StatsViewModel @Inject constructor(
             .toEpochMilli()
 
         viewModelScope.launch {
-            combine(
-                timeRecordRepository.getRecordsByDateRange(startMs, endMs),
-                skillRepository.getActiveSkills()
-            ) { records, skills ->
-                Pair(records, skills)
-            }.collect { (records, skills) ->
-                val skillMap = skills.associateBy { it.id }
+            try {
+                combine(
+                    timeRecordRepository.getRecordsByDateRange(startMs, endMs),
+                    skillRepository.getActiveSkills()
+                ) { records, skills ->
+                    Pair(records, skills)
+                }.collect { (records, skills) ->
+                    val skillMap = skills.associateBy { it.id }
 
-                // Calculate skill stats
-                val skillStats = records
-                    .groupBy { it.skillId }
-                    .mapNotNull { (skillId, skillRecords) ->
-                        val skill = skillMap[skillId] ?: return@mapNotNull null
-                        val investMins = skillRecords
-                            .filter { it.recordType == RecordType.INVESTMENT }
-                            .sumOf { it.durationMinutes }
-                        val consumeMins = skillRecords
-                            .filter { it.recordType == RecordType.CONSUMPTION }
-                            .sumOf { it.durationMinutes }
-                        val totalMins = investMins + consumeMins
-                        val sessions = skillRecords.size
-                        val gold = skillRecords.sumOf { record ->
-                            GoldCalculator.calculateGold(
-                                minutes = record.durationMinutes,
-                                isInvestment = record.recordType == RecordType.INVESTMENT,
-                                isFirstTimerToday = false,
-                                skillLevel = skill.level
+                    // Calculate skill stats
+                    val skillStats = records
+                        .groupBy { it.skillId }
+                        .mapNotNull { (skillId, skillRecords) ->
+                            val skill = skillMap[skillId] ?: return@mapNotNull null
+                            val investMins = skillRecords
+                                .filter { it.recordType == RecordType.INVESTMENT }
+                                .sumOf { it.durationMinutes }
+                            val consumeMins = skillRecords
+                                .filter { it.recordType == RecordType.CONSUMPTION }
+                                .sumOf { it.durationMinutes }
+                            val totalMins = investMins + consumeMins
+                            val sessions = skillRecords.size
+                            val gold = skillRecords.sumOf { record ->
+                                GoldCalculator.calculateGold(
+                                    minutes = record.durationMinutes,
+                                    isInvestment = record.recordType == RecordType.INVESTMENT,
+                                    isFirstTimerToday = false,
+                                    skillLevel = skill.level
+                                )
+                            }
+                            SkillStat(
+                                skill = skill,
+                                investmentMinutes = investMins,
+                                consumptionMinutes = consumeMins,
+                                totalMinutes = totalMins,
+                                sessions = sessions,
+                                goldEarned = gold
                             )
                         }
-                        SkillStat(
-                            skill = skill,
-                            investmentMinutes = investMins,
-                            consumptionMinutes = consumeMins,
-                            totalMinutes = totalMins,
-                            sessions = sessions,
-                            goldEarned = gold
+                        .sortedByDescending { it.totalMinutes }
+
+                    // Calculate daily data
+                    val dailyMap = mutableMapOf<String, DailyData>()
+                    var iterDate = startDate
+                    while (!iterDate.isAfter(endDate)) {
+                        val key = iterDate.format(dayKeyFormatter)
+                        dailyMap[key] = DailyData(
+                            date = iterDate.format(dailyDisplayFormatter),
+                            investmentMinutes = 0,
+                            consumptionMinutes = 0
                         )
+                        iterDate = iterDate.plusDays(1)
                     }
-                    .sortedByDescending { it.totalMinutes }
 
-                // Calculate daily data
-                val dailyMap = mutableMapOf<String, DailyData>()
-                var iterDate = startDate
-                while (!iterDate.isAfter(endDate)) {
-                    val key = iterDate.format(dayKeyFormatter)
-                    dailyMap[key] = DailyData(
-                        date = iterDate.format(dailyDisplayFormatter),
-                        investmentMinutes = 0,
-                        consumptionMinutes = 0
-                    )
-                    iterDate = iterDate.plusDays(1)
-                }
-
-                for (record in records) {
-                    val recDate = java.time.Instant.ofEpochMilli(record.startTime)
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-                    val key = recDate.format(dayKeyFormatter)
-                    dailyMap[key]?.let { existing ->
-                        dailyMap[key] = if (record.recordType == RecordType.INVESTMENT) {
-                            existing.copy(investmentMinutes = existing.investmentMinutes + record.durationMinutes)
-                        } else {
-                            existing.copy(consumptionMinutes = existing.consumptionMinutes + record.durationMinutes)
+                    for (record in records) {
+                        val recDate = java.time.Instant.ofEpochMilli(record.startTime)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                        val key = recDate.format(dayKeyFormatter)
+                        dailyMap[key]?.let { existing ->
+                            dailyMap[key] = if (record.recordType == RecordType.INVESTMENT) {
+                                existing.copy(investmentMinutes = existing.investmentMinutes + record.durationMinutes)
+                            } else {
+                                existing.copy(consumptionMinutes = existing.consumptionMinutes + record.durationMinutes)
+                            }
                         }
                     }
+
+                    val dailyData = dailyMap.values.toList()
+
+                    // Calculate category distribution
+                    val categoryMinutes = mutableMapOf<SkillCategory, Int>()
+                    for (stat in skillStats) {
+                        categoryMinutes[stat.skill.category] =
+                            (categoryMinutes[stat.skill.category] ?: 0) + stat.totalMinutes
+                    }
+                    val totalAllMinutes = categoryMinutes.values.sum().coerceAtLeast(1)
+                    val categoryDistribution = categoryEntries.mapNotNull { cat ->
+                        val mins = categoryMinutes[cat] ?: return@mapNotNull null
+                        CategoryDistribution(
+                            category = cat,
+                            totalMinutes = mins,
+                            percentage = mins.toFloat() / totalAllMinutes
+                        )
+                    }.sortedByDescending { it.totalMinutes }
+
+                    val totalInvestment = records
+                        .filter { it.recordType == RecordType.INVESTMENT }
+                        .sumOf { it.durationMinutes }
+                    val totalConsumption = records
+                        .filter { it.recordType == RecordType.CONSUMPTION }
+                        .sumOf { it.durationMinutes }
+                    val totalGold = skillStats.sumOf { it.goldEarned }
+                    val totalSessions = records.size
+
+                    // Load previous period data for comparison
+                    val prevRecords = try {
+                        val flow = timeRecordRepository.getRecordsByDateRange(prevStartMs, prevEndMs)
+                        var result: List<TimeRecord> = emptyList()
+                        flow.collect { result = it }
+                        result
+                    } catch (e: Exception) {
+                        emptyList()
+                    }
+                    val prevInvestment = prevRecords
+                        .filter { it.recordType == RecordType.INVESTMENT }
+                        .sumOf { it.durationMinutes }
+
+                    val trend = when {
+                        prevInvestment == 0 && totalInvestment > 0 -> TrendIndicator.UP
+                        prevInvestment == 0 -> TrendIndicator.NEUTRAL
+                        totalInvestment > prevInvestment -> TrendIndicator.UP
+                        totalInvestment < prevInvestment -> TrendIndicator.DOWN
+                        else -> TrendIndicator.NEUTRAL
+                    }
+
+                    _uiState.update {
+                        it.copy(
+                            totalInvestmentMinutes = totalInvestment,
+                            totalConsumptionMinutes = totalConsumption,
+                            totalGoldEarned = totalGold,
+                            totalSessions = totalSessions,
+                            skillStats = skillStats,
+                            dailyData = dailyData,
+                            categoryDistribution = categoryDistribution,
+                            previousPeriodInvestment = prevInvestment,
+                            investmentTrend = trend,
+                            isLoading = false
+                        )
+                    }
                 }
-
-                val dailyData = dailyMap.values.toList()
-
-                // Calculate category distribution
-                val categoryMinutes = mutableMapOf<SkillCategory, Int>()
-                for (stat in skillStats) {
-                    categoryMinutes[stat.skill.category] =
-                        (categoryMinutes[stat.skill.category] ?: 0) + stat.totalMinutes
-                }
-                val totalAllMinutes = categoryMinutes.values.sum().coerceAtLeast(1)
-                val categoryDistribution = categoryEntries.mapNotNull { cat ->
-                    val mins = categoryMinutes[cat] ?: return@mapNotNull null
-                    CategoryDistribution(
-                        category = cat,
-                        totalMinutes = mins,
-                        percentage = mins.toFloat() / totalAllMinutes
-                    )
-                }.sortedByDescending { it.totalMinutes }
-
-                val totalInvestment = records
-                    .filter { it.recordType == RecordType.INVESTMENT }
-                    .sumOf { it.durationMinutes }
-                val totalConsumption = records
-                    .filter { it.recordType == RecordType.CONSUMPTION }
-                    .sumOf { it.durationMinutes }
-                val totalGold = skillStats.sumOf { it.goldEarned }
-                val totalSessions = records.size
-
-                // Load previous period data for comparison
-                val prevRecords = try {
-                    val flow = timeRecordRepository.getRecordsByDateRange(prevStartMs, prevEndMs)
-                    var result: List<TimeRecord> = emptyList()
-                    flow.collect { result = it }
-                    result
-                } catch (e: Exception) {
-                    emptyList()
-                }
-                val prevInvestment = prevRecords
-                    .filter { it.recordType == RecordType.INVESTMENT }
-                    .sumOf { it.durationMinutes }
-
-                val trend = when {
-                    prevInvestment == 0 && totalInvestment > 0 -> TrendIndicator.UP
-                    prevInvestment == 0 -> TrendIndicator.NEUTRAL
-                    totalInvestment > prevInvestment -> TrendIndicator.UP
-                    totalInvestment < prevInvestment -> TrendIndicator.DOWN
-                    else -> TrendIndicator.NEUTRAL
-                }
-
-                _uiState.update {
-                    it.copy(
-                        totalInvestmentMinutes = totalInvestment,
-                        totalConsumptionMinutes = totalConsumption,
-                        totalGoldEarned = totalGold,
-                        totalSessions = totalSessions,
-                        skillStats = skillStats,
-                        dailyData = dailyData,
-                        categoryDistribution = categoryDistribution,
-                        previousPeriodInvestment = prevInvestment,
-                        investmentTrend = trend,
-                        isLoading = false
-                    )
-                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

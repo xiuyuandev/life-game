@@ -20,7 +20,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class SkillsUiState(
     val skills: List<Skill> = emptyList(),
     val isLoading: Boolean = true,
@@ -87,22 +89,28 @@ class SkillsViewModel @Inject constructor(
 
     fun pauseSkill(id: Long) {
         viewModelScope.launch {
-            val skill = skillRepository.getSkillById(id) ?: return@launch
-            skillRepository.updateSkill(skill.copy(status = SkillStatus.PAUSED))
+            try {
+                val skill = skillRepository.getSkillById(id) ?: return@launch
+                skillRepository.updateSkill(skill.copy(status = SkillStatus.PAUSED))
+            } catch (_: Exception) { }
         }
     }
 
     fun archiveSkill(id: Long) {
         viewModelScope.launch {
-            val skill = skillRepository.getSkillById(id) ?: return@launch
-            skillRepository.updateSkill(skill.copy(status = SkillStatus.ARCHIVED))
+            try {
+                val skill = skillRepository.getSkillById(id) ?: return@launch
+                skillRepository.updateSkill(skill.copy(status = SkillStatus.ARCHIVED))
+            } catch (_: Exception) { }
         }
     }
 
     fun resumeSkill(id: Long) {
         viewModelScope.launch {
-            val skill = skillRepository.getSkillById(id) ?: return@launch
-            skillRepository.updateSkill(skill.copy(status = SkillStatus.ACTIVE))
+            try {
+                val skill = skillRepository.getSkillById(id) ?: return@launch
+                skillRepository.updateSkill(skill.copy(status = SkillStatus.ACTIVE))
+            } catch (_: Exception) { }
         }
     }
 }

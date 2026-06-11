@@ -20,7 +20,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class CreateSkillUiState(
     val name: String = "",
     val category: SkillCategory = SkillCategory.LIFE,
@@ -111,17 +113,19 @@ class CreateSkillViewModel @Inject constructor(
 
     private fun loadEnergy() {
         viewModelScope.launch {
-            val todayStr = dateFormat.format(Date())
-            dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
-                val state = dailyState ?: return@collect
-                _uiState.update {
-                    it.copy(
-                        energy = state.energy,
-                        energyCap = state.energyCap,
-                        canCreate = it.name.isNotBlank() && state.energy >= 2f
-                    )
+            try {
+                val todayStr = dateFormat.format(Date())
+                dailyStateRepository.getStateByDate(todayStr).collect { dailyState ->
+                    val state = dailyState ?: return@collect
+                    _uiState.update {
+                        it.copy(
+                            energy = state.energy,
+                            energyCap = state.energyCap,
+                            canCreate = it.name.isNotBlank() && state.energy >= 2f
+                        )
+                    }
                 }
-            }
+            } catch (_: Exception) { }
         }
     }
 
@@ -204,37 +208,41 @@ class CreateSkillViewModel @Inject constructor(
         _uiState.update { it.copy(isCreating = true, errorMessage = null) }
 
         viewModelScope.launch {
-            val customThresholds = if (state.customThresholdsEnabled) {
-                mapOf(
-                    2 to state.thresholdLv2,
-                    3 to state.thresholdLv3,
-                    4 to state.thresholdLv4,
-                    5 to state.thresholdLv5
+            try {
+                val customThresholds = if (state.customThresholdsEnabled) {
+                    mapOf(
+                        2 to state.thresholdLv2,
+                        3 to state.thresholdLv3,
+                        4 to state.thresholdLv4,
+                        5 to state.thresholdLv5
+                    )
+                } else {
+                    emptyMap()
+                }
+
+                val skill = Skill(
+                    name = state.name.trim(),
+                    category = state.category,
+                    boundAttribute = state.boundAttribute,
+                    customThresholds = customThresholds,
+                    status = SkillStatus.ACTIVE
                 )
-            } else {
-                emptyMap()
+
+                skillRepository.insertSkill(skill)
+
+                // Deduct energy
+                val todayStr = dateFormat.format(Date())
+                val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
+                if (dailyState != null) {
+                    dailyStateRepository.insertOrUpdateState(
+                        dailyState.copy(energy = dailyState.energy - 2f)
+                    )
+                }
+
+                _uiState.update { it.copy(isCreating = false, createSuccess = true) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isCreating = false, errorMessage = "创建失败，请重试") }
             }
-
-            val skill = Skill(
-                name = state.name.trim(),
-                category = state.category,
-                boundAttribute = state.boundAttribute,
-                customThresholds = customThresholds,
-                status = SkillStatus.ACTIVE
-            )
-
-            skillRepository.insertSkill(skill)
-
-            // Deduct energy
-            val todayStr = dateFormat.format(Date())
-            val dailyState = dailyStateRepository.getStateByDate(todayStr).first()
-            if (dailyState != null) {
-                dailyStateRepository.insertOrUpdateState(
-                    dailyState.copy(energy = dailyState.energy - 2f)
-                )
-            }
-
-            _uiState.update { it.copy(isCreating = false, createSuccess = true) }
         }
     }
 }

@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class AchievementUiState(
     val achievements: List<Achievement> = emptyList(),
     val unlockedCount: Int = 0,
@@ -36,37 +38,43 @@ class AchievementViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            achievementRepository.initializeAchievements()
+            try {
+                achievementRepository.initializeAchievements()
+            } catch (_: Exception) { }
             loadAchievements()
         }
     }
 
     private fun loadAchievements() {
         viewModelScope.launch {
-            achievementRepository.getAllAchievements().collect { achievements ->
-                val unlockedCount = achievements.count { it.isUnlocked }
-                val previousUnlocked = _uiState.value.achievements.filter { it.isUnlocked }.map { it.id }.toSet()
-                val currentUnlocked = achievements.filter { it.isUnlocked }.map { it.id }.toSet()
-                val newlyUnlockedIds = currentUnlocked - previousUnlocked
-                val newlyUnlocked = if (newlyUnlockedIds.isNotEmpty() && _uiState.value.achievements.isNotEmpty()) {
-                    achievements.find { it.id in newlyUnlockedIds }
-                } else {
-                    null
-                }
+            try {
+                achievementRepository.getAllAchievements().collect { achievements ->
+                    val unlockedCount = achievements.count { it.isUnlocked }
+                    val previousUnlocked = _uiState.value.achievements.filter { it.isUnlocked }.map { it.id }.toSet()
+                    val currentUnlocked = achievements.filter { it.isUnlocked }.map { it.id }.toSet()
+                    val newlyUnlockedIds = currentUnlocked - previousUnlocked
+                    val newlyUnlocked = if (newlyUnlockedIds.isNotEmpty() && _uiState.value.achievements.isNotEmpty()) {
+                        achievements.find { it.id in newlyUnlockedIds }
+                    } else {
+                        null
+                    }
 
-                if (newlyUnlocked != null) {
-                    _newlyUnlocked.emit(newlyUnlocked)
-                }
+                    if (newlyUnlocked != null) {
+                        _newlyUnlocked.emit(newlyUnlocked)
+                    }
 
-                _uiState.update {
-                    it.copy(
-                        achievements = achievements,
-                        unlockedCount = unlockedCount,
-                        totalCount = achievements.size,
-                        newlyUnlocked = newlyUnlocked,
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            achievements = achievements,
+                            unlockedCount = unlockedCount,
+                            totalCount = achievements.size,
+                            newlyUnlocked = newlyUnlocked,
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

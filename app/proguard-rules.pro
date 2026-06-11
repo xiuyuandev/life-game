@@ -32,3 +32,25 @@
 -keepclassmembers class * {
     @androidx.compose.runtime.Composable <methods>;
 }
+
+# DataStore
+-keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite {
+    <fields>;
+}
+
+# WorkManager
+-keep class * extends androidx.work.Worker
+-keep class * extends androidx.work.CoroutineWorker
+-keepclassmembers class * extends androidx.work.CoroutineWorker {
+    <init>(...);
+}
+
+# General Kotlin
+-keep class kotlin.Metadata { *; }
+-keepclassmembers class **$WhenMappings {
+    <fields>;
+}
+
+# Keep line numbers for debugging
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

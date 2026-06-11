@@ -21,7 +21,9 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class LedgerEntry(
     val date: String,
     val skillName: String,
@@ -32,6 +34,7 @@ data class LedgerEntry(
     val timestamp: Long
 )
 
+@Immutable
 data class MonthlySummary(
     val totalInvestmentMinutes: Int = 0,
     val totalConsumptionMinutes: Int = 0,
@@ -42,6 +45,7 @@ data class MonthlySummary(
     val averageDailyInvestment: Int = 0
 )
 
+@Immutable
 data class LedgerUiState(
     val selectedMonth: String = "",
     val displayMonth: String = "",
@@ -131,87 +135,91 @@ class LedgerViewModel @Inject constructor(
         val daysInMonth = endDate.dayOfMonth
 
         viewModelScope.launch {
-            combine(
-                timeRecordRepository.getRecordsByDateRange(startMs, endMs),
-                skillRepository.getActiveSkills()
-            ) { records, skills ->
-                Pair(records, skills)
-            }.collect { (records, skills) ->
-                val skillMap = skills.associateBy { it.id }
+            try {
+                combine(
+                    timeRecordRepository.getRecordsByDateRange(startMs, endMs),
+                    skillRepository.getActiveSkills()
+                ) { records, skills ->
+                    Pair(records, skills)
+                }.collect { (records, skills) ->
+                    val skillMap = skills.associateBy { it.id }
 
-                // Build ledger entries
-                val entries = records.mapNotNull { record ->
-                    val skill = skillMap[record.skillId] ?: return@mapNotNull null
-                    val isInvestment = record.recordType == RecordType.INVESTMENT
-                    val gold = GoldCalculator.calculateGold(
-                        minutes = record.durationMinutes,
-                        isInvestment = isInvestment,
-                        isFirstTimerToday = false,
-                        skillLevel = skill.level
-                    )
-                    LedgerEntry(
-                        date = java.time.Instant.ofEpochMilli(record.startTime)
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate()
-                            .format(dateFormatter),
-                        skillName = skill.name,
-                        skillCategory = skill.category,
-                        durationMinutes = record.durationMinutes,
-                        recordType = record.recordType,
-                        goldAmount = gold,
-                        timestamp = record.startTime
-                    )
-                }.sortedByDescending { it.timestamp }
+                    // Build ledger entries
+                    val entries = records.mapNotNull { record ->
+                        val skill = skillMap[record.skillId] ?: return@mapNotNull null
+                        val isInvestment = record.recordType == RecordType.INVESTMENT
+                        val gold = GoldCalculator.calculateGold(
+                            minutes = record.durationMinutes,
+                            isInvestment = isInvestment,
+                            isFirstTimerToday = false,
+                            skillLevel = skill.level
+                        )
+                        LedgerEntry(
+                            date = java.time.Instant.ofEpochMilli(record.startTime)
+                                .atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                                .format(dateFormatter),
+                            skillName = skill.name,
+                            skillCategory = skill.category,
+                            durationMinutes = record.durationMinutes,
+                            recordType = record.recordType,
+                            goldAmount = gold,
+                            timestamp = record.startTime
+                        )
+                    }.sortedByDescending { it.timestamp }
 
-                // Group by date
-                val groupedEntries = entries.groupBy { entry ->
-                    try {
-                        val parsed = LocalDate.parse(entry.date, dateFormatter)
-                        parsed.format(displayDateFormatter)
-                    } catch (e: Exception) {
-                        entry.date
+                    // Group by date
+                    val groupedEntries = entries.groupBy { entry ->
+                        try {
+                            val parsed = LocalDate.parse(entry.date, dateFormatter)
+                            parsed.format(displayDateFormatter)
+                        } catch (e: Exception) {
+                            entry.date
+                        }
+                    }
+
+                    // Calculate monthly summary
+                    val totalInvestmentMinutes = entries
+                        .filter { it.recordType == RecordType.INVESTMENT }
+                        .sumOf { it.durationMinutes }
+                    val totalConsumptionMinutes = entries
+                        .filter { it.recordType == RecordType.CONSUMPTION }
+                        .sumOf { it.durationMinutes }
+                    val totalGoldEarned = entries
+                        .filter { it.recordType == RecordType.INVESTMENT }
+                        .sumOf { it.goldAmount }
+                    val totalGoldConsumed = entries
+                        .filter { it.recordType == RecordType.CONSUMPTION }
+                        .sumOf { it.goldAmount }
+                    val netGold = totalGoldEarned - totalGoldConsumed
+                    val activeDays = entries.map { it.date }.distinct().size
+                    val averageDailyInvestment = if (activeDays > 0) {
+                        totalInvestmentMinutes / activeDays
+                    } else {
+                        0
+                    }
+
+                    val summary = MonthlySummary(
+                        totalInvestmentMinutes = totalInvestmentMinutes,
+                        totalConsumptionMinutes = totalConsumptionMinutes,
+                        totalGoldEarned = totalGoldEarned,
+                        totalGoldConsumed = totalGoldConsumed,
+                        netGold = netGold,
+                        daysActive = activeDays,
+                        averageDailyInvestment = averageDailyInvestment
+                    )
+
+                    _uiState.update {
+                        it.copy(
+                            entries = entries,
+                            groupedEntries = groupedEntries,
+                            monthlySummary = summary,
+                            isLoading = false
+                        )
                     }
                 }
-
-                // Calculate monthly summary
-                val totalInvestmentMinutes = entries
-                    .filter { it.recordType == RecordType.INVESTMENT }
-                    .sumOf { it.durationMinutes }
-                val totalConsumptionMinutes = entries
-                    .filter { it.recordType == RecordType.CONSUMPTION }
-                    .sumOf { it.durationMinutes }
-                val totalGoldEarned = entries
-                    .filter { it.recordType == RecordType.INVESTMENT }
-                    .sumOf { it.goldAmount }
-                val totalGoldConsumed = entries
-                    .filter { it.recordType == RecordType.CONSUMPTION }
-                    .sumOf { it.goldAmount }
-                val netGold = totalGoldEarned - totalGoldConsumed
-                val activeDays = entries.map { it.date }.distinct().size
-                val averageDailyInvestment = if (activeDays > 0) {
-                    totalInvestmentMinutes / activeDays
-                } else {
-                    0
-                }
-
-                val summary = MonthlySummary(
-                    totalInvestmentMinutes = totalInvestmentMinutes,
-                    totalConsumptionMinutes = totalConsumptionMinutes,
-                    totalGoldEarned = totalGoldEarned,
-                    totalGoldConsumed = totalGoldConsumed,
-                    netGold = netGold,
-                    daysActive = activeDays,
-                    averageDailyInvestment = averageDailyInvestment
-                )
-
-                _uiState.update {
-                    it.copy(
-                        entries = entries,
-                        groupedEntries = groupedEntries,
-                        monthlySummary = summary,
-                        isLoading = false
-                    )
-                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

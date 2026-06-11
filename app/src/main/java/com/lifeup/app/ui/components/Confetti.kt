@@ -11,7 +11,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.coroutines.delay
 import kotlin.random.Random
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ConfettiParticle(
     val x: Float,
     val y: Float,

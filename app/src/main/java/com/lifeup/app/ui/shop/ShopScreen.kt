@@ -407,7 +407,8 @@ private fun ShopContent(
             ) { shopItem ->
                 ShopItemCard(
                     shopItem = shopItem,
-                    onPurchaseClick = onPurchaseClick
+                    onPurchaseClick = onPurchaseClick,
+                    modifier = Modifier.animateItemPlacement()
                 )
             }
 
@@ -422,13 +423,14 @@ private fun ShopContent(
 @Composable
 private fun ShopItemCard(
     shopItem: ShopItem,
-    onPurchaseClick: (ItemTemplate) -> Unit
+    onPurchaseClick: (ItemTemplate) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val template = shopItem.template
     val tierColor = tierColorMap[template.itemTier] ?: Color.Gray
 
     Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),

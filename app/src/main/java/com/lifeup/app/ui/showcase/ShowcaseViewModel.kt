@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ShowcaseUiState(
     val skills: List<Skill> = emptyList(),
     val showcaseSkills: List<Skill> = emptyList(),
@@ -22,6 +24,7 @@ data class ShowcaseUiState(
     val reorderHallIndex: Int = -1
 )
 
+@Immutable
 data class ShowcaseHall(
     val name: String,
     val category: SkillCategory?,
@@ -29,6 +32,7 @@ data class ShowcaseHall(
     val centerSkill: Skill?
 )
 
+@Immutable
 private data class HallDefinition(
     val name: String,
     val category: SkillCategory
@@ -58,17 +62,21 @@ class ShowcaseViewModel @Inject constructor(
 
     private fun loadSkills() {
         viewModelScope.launch {
-            skillRepository.getActiveSkills().collect { skills ->
-                val showcaseSkills = skills.filter { it.displayInShowcase }
-                val halls = buildHalls(showcaseSkills)
-                _uiState.update {
-                    it.copy(
-                        skills = skills,
-                        showcaseSkills = showcaseSkills,
-                        halls = halls,
-                        isLoading = false
-                    )
+            try {
+                skillRepository.getActiveSkills().collect { skills ->
+                    val showcaseSkills = skills.filter { it.displayInShowcase }
+                    val halls = buildHalls(showcaseSkills)
+                    _uiState.update {
+                        it.copy(
+                            skills = skills,
+                            showcaseSkills = showcaseSkills,
+                            halls = halls,
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -122,12 +130,14 @@ class ShowcaseViewModel @Inject constructor(
 
     private fun saveReorderedSkills(skills: List<Skill>) {
         viewModelScope.launch {
-            skills.forEachIndexed { index, skill ->
-                val newSortOrder = skills.size - index
-                if (skill.sortOrder != newSortOrder) {
-                    skillRepository.updateSkill(skill.copy(sortOrder = newSortOrder))
+            try {
+                skills.forEachIndexed { index, skill ->
+                    val newSortOrder = skills.size - index
+                    if (skill.sortOrder != newSortOrder) {
+                        skillRepository.updateSkill(skill.copy(sortOrder = newSortOrder))
+                    }
                 }
-            }
+            } catch (_: Exception) { }
         }
     }
 

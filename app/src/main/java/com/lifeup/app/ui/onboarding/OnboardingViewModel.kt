@@ -21,7 +21,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class OnboardingUiState(
     val currentStep: Int = 1,
     val selectedTemplateIndex: Int = -1,
@@ -67,23 +69,27 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(isCreating = true, errorMessage = null) }
 
         viewModelScope.launch {
-            // Onboarding: free skill creation, no energy cost
-            val skill = Skill(
-                name = template.name,
-                category = template.category,
-                boundAttribute = template.boundAttribute,
-                customThresholds = template.suggestedThresholds,
-                iconKey = template.suggestedIconKey,
-                status = SkillStatus.ACTIVE
-            )
-
-            val skillId = skillRepository.insertSkill(skill)
-            _uiState.update {
-                it.copy(
-                    isCreating = false,
-                    createdSkillId = skillId,
-                    currentStep = 2
+            try {
+                // Onboarding: free skill creation, no energy cost
+                val skill = Skill(
+                    name = template.name,
+                    category = template.category,
+                    boundAttribute = template.boundAttribute,
+                    customThresholds = template.suggestedThresholds,
+                    iconKey = template.suggestedIconKey,
+                    status = SkillStatus.ACTIVE
                 )
+
+                val skillId = skillRepository.insertSkill(skill)
+                _uiState.update {
+                    it.copy(
+                        isCreating = false,
+                        createdSkillId = skillId,
+                        currentStep = 2
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isCreating = false, errorMessage = "创建失败，请重试") }
             }
         }
     }
@@ -93,34 +99,40 @@ class OnboardingViewModel @Inject constructor(
         _uiState.update { it.copy(isCompleting = true) }
 
         viewModelScope.launch {
-            val todayStr = dateFormat.format(Date())
+            try {
+                val todayStr = dateFormat.format(Date())
 
-            // Create and complete the "喝杯水" habit
-            val habit = Todo(
-                title = "喝杯水",
-                isHabit = true,
-                priority = Priority.NONE,
-                isCompleted = true,
-                completedAt = System.currentTimeMillis(),
-                date = todayStr,
-                sortOrder = 0
-            )
-
-            todoRepository.insertTodo(habit)
-
-            _uiState.update {
-                it.copy(
-                    isCompleting = false,
-                    habitCompleted = true,
-                    currentStep = 3
+                // Create and complete the "喝杯水" habit
+                val habit = Todo(
+                    title = "喝杯水",
+                    isHabit = true,
+                    priority = Priority.NONE,
+                    isCompleted = true,
+                    completedAt = System.currentTimeMillis(),
+                    date = todayStr,
+                    sortOrder = 0
                 )
+
+                todoRepository.insertTodo(habit)
+
+                _uiState.update {
+                    it.copy(
+                        isCompleting = false,
+                        habitCompleted = true,
+                        currentStep = 3
+                    )
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isCompleting = false) }
             }
         }
     }
 
     fun markOnboardingCompleted() {
         viewModelScope.launch {
-            settingsPrefs.setOnboardingCompleted(true)
+            try {
+                settingsPrefs.setOnboardingCompleted(true)
+            } catch (_: Exception) { }
         }
     }
 }

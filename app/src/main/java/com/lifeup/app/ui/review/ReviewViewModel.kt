@@ -24,7 +24,9 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ReviewUiState(
     val selectedDate: String = "",
     val displayDate: String = "",
@@ -54,6 +56,7 @@ data class ReviewUiState(
             "0"
         }
 
+    @Immutable
     data class SkillBreakdown(
         val skill: Skill,
         val minutes: Int
@@ -129,34 +132,38 @@ class ReviewViewModel @Inject constructor(
 
     private fun loadDateData(date: String) {
         viewModelScope.launch {
-            val (startMs, endMs) = getDayTimeRange(date)
+            try {
+                val (startMs, endMs) = getDayTimeRange(date)
 
-            combine(
-                timeRecordRepository.getRecordsByDateRange(startMs, endMs),
-                skillRepository.getActiveSkills(),
-                dailyStateRepository.getStateByDate(date)
-            ) { records, skills, dailyState ->
-                Triple(records, skills, dailyState)
-            }.collect { (records, skills, dailyState) ->
-                val investMins = records
-                    .filter { it.recordType == RecordType.INVESTMENT }
-                    .sumOf { it.durationMinutes }
-                val consumeMins = records
-                    .filter { it.recordType == RecordType.CONSUMPTION }
-                    .sumOf { it.durationMinutes }
-                val streak = dailyStateRepository.getLatestStreak()
-                    ?: dailyState?.streakCount
-                    ?: 0
+                combine(
+                    timeRecordRepository.getRecordsByDateRange(startMs, endMs),
+                    skillRepository.getActiveSkills(),
+                    dailyStateRepository.getStateByDate(date)
+                ) { records, skills, dailyState ->
+                    Triple(records, skills, dailyState)
+                }.collect { (records, skills, dailyState) ->
+                    val investMins = records
+                        .filter { it.recordType == RecordType.INVESTMENT }
+                        .sumOf { it.durationMinutes }
+                    val consumeMins = records
+                        .filter { it.recordType == RecordType.CONSUMPTION }
+                        .sumOf { it.durationMinutes }
+                    val streak = dailyStateRepository.getLatestStreak()
+                        ?: dailyState?.streakCount
+                        ?: 0
 
-                _uiState.update { it.copy(
-                    timeRecords = records.sortedBy { r -> r.startTime },
-                    skills = skills,
-                    dailyState = dailyState,
-                    investmentMinutes = investMins,
-                    consumptionMinutes = consumeMins,
-                    streakCount = streak,
-                    isLoading = false
-                )}
+                    _uiState.update { it.copy(
+                        timeRecords = records.sortedBy { r -> r.startTime },
+                        skills = skills,
+                        dailyState = dailyState,
+                        investmentMinutes = investMins,
+                        consumptionMinutes = consumeMins,
+                        streakCount = streak,
+                        isLoading = false
+                    )}
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

@@ -23,7 +23,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class TodayUiState(
     val habits: List<Todo> = emptyList(),
     val todos: List<Todo> = emptyList(),

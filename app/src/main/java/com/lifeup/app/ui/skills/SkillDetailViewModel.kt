@@ -18,18 +18,22 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class DailyFrequency(
     val date: String, // "MM/dd"
     val count: Int,
     val totalMinutes: Int
 )
 
+@Immutable
 data class GrowthPoint(
     val month: String, // "yyyy-MM"
     val cumulativeMinutes: Long
 )
 
+@Immutable
 data class SkillDetailUiState(
     val skill: Skill? = null,
     val timeRecords: List<TimeRecord> = emptyList(),
@@ -57,23 +61,31 @@ class SkillDetailViewModel @Inject constructor(
 
     private fun loadSkill() {
         viewModelScope.launch {
-            val skill = skillRepository.getSkillById(skillId)
-            _uiState.update { it.copy(skill = skill, isLoading = false) }
+            try {
+                val skill = skillRepository.getSkillById(skillId)
+                _uiState.update { it.copy(skill = skill, isLoading = false) }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+            }
         }
     }
 
     private fun loadTimeRecords() {
         viewModelScope.launch {
-            timeRecordRepository.getRecordsBySkill(skillId).collect { records ->
-                val weekly = calculateWeeklyFrequency(records)
-                val growth = calculateGrowthCurve(records)
-                _uiState.update {
-                    it.copy(
-                        timeRecords = records,
-                        weeklyFrequency = weekly,
-                        growthCurve = growth
-                    )
+            try {
+                timeRecordRepository.getRecordsBySkill(skillId).collect { records ->
+                    val weekly = calculateWeeklyFrequency(records)
+                    val growth = calculateGrowthCurve(records)
+                    _uiState.update {
+                        it.copy(
+                            timeRecords = records,
+                            weeklyFrequency = weekly,
+                            growthCurve = growth
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

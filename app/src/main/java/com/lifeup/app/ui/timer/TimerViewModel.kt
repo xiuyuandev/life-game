@@ -27,7 +27,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class TimerUiState(
     val skill: Skill? = null,
     val isLoading: Boolean = true,

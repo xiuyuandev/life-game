@@ -13,7 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class ProfileUiState(
     val totalTime: Long = 0L,
     val skillCount: Int = 0,
@@ -40,22 +42,26 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            skillRepository.getActiveSkills().collect { skills ->
-                val totalTime = skills.sumOf { it.totalMinutes }
-                val skillCount = skills.size
-                val maxLevel = skills.maxOfOrNull { it.level } ?: 1
-                val totalExp = totalTime * 10L
-                val characterLevel = AttributeCalculator.calculateCharacterLevel(totalExp).coerceAtLeast(1)
+            try {
+                skillRepository.getActiveSkills().collect { skills ->
+                    val totalTime = skills.sumOf { it.totalMinutes }
+                    val skillCount = skills.size
+                    val maxLevel = skills.maxOfOrNull { it.level } ?: 1
+                    val totalExp = totalTime * 10L
+                    val characterLevel = AttributeCalculator.calculateCharacterLevel(totalExp).coerceAtLeast(1)
 
-                _uiState.update {
-                    it.copy(
-                        totalTime = totalTime,
-                        skillCount = skillCount,
-                        maxLevel = maxLevel,
-                        characterLevel = characterLevel,
-                        isLoading = false
-                    )
+                    _uiState.update {
+                        it.copy(
+                            totalTime = totalTime,
+                            skillCount = skillCount,
+                            maxLevel = maxLevel,
+                            characterLevel = characterLevel,
+                            isLoading = false
+                        )
+                    }
                 }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

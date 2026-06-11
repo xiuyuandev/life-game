@@ -22,7 +22,9 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class RetroactiveUiState(
     val skills: List<Skill> = emptyList(),
     val selectedSkillId: Long? = null,

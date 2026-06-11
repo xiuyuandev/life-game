@@ -22,7 +22,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import javax.inject.Inject
+import androidx.compose.runtime.Immutable
 
+@Immutable
 data class CharacterUiState(
     val characterLevel: Int = 1,
     val totalExp: Long = 0L,
